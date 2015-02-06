@@ -9,6 +9,9 @@
         <property name="orientation">horizontal</property>
         <style>
           <class name="linked"/>
+          <class name="notebook"/>
+          <class name="top"/>
+          <class name="header"/>
         </style>
         <child>
           <object class="GtkMenuButton" id="stack_menu">
@@ -16,6 +19,7 @@
             <style>
               <class name="image-button"/>
               <class name="tab-header-first"/>
+	      <class name="flat"/>
             </style>
             <child>
               <object class="GtkImage">
@@ -31,6 +35,7 @@
             <property name="hexpand">true</property>
             <style>
               <class name="tab-header-first"/>
+	      <class name="flat"/>
             </style>
           </object>
         </child>
