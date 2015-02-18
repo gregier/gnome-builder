@@ -1,6 +1,9 @@
 bin_PROGRAMS += gnome-builder
 noinst_LTLIBRARIES += libgnome-builder.la
 
+gnome_builder_type_headers = \
+	src/editor/gb-source-view-mode.h
+
 libgnome_builder_la_SOURCES = \
 	$(gnome_builder_built_sources) \
 	src/animation/gb-animation.c \
@@ -279,7 +282,9 @@ gnome_builder_LDADD = libgnome-builder.la
 # in how we build projects inside of Builder.
 gnome_builder_built_sources = \
 	src/resources/gb-resources.c \
-	src/resources/gb-resources.h
+	src/resources/gb-resources.h \
+	src/util/gb-types.c \
+	src/util/gb-types.h
 
 resource_files = $(shell glib-compile-resources --sourcedir=$(top_srcdir)/src/resources --generate-dependencies $(top_srcdir)/src/resources/gnome-builder.gresource.xml)
 src/resources/gb-resources.c: src/resources/gnome-builder.gresource.xml $(resource_files)
@@ -287,12 +292,20 @@ src/resources/gb-resources.c: src/resources/gnome-builder.gresource.xml $(resour
 src/resources/gb-resources.h: src/resources/gnome-builder.gresource.xml $(resource_files)
 	$(AM_V_GEN)glib-compile-resources --target=$@ --sourcedir=$(top_srcdir)/src/resources --generate-header --c-name gb $(top_srcdir)/src/resources/gnome-builder.gresource.xml
 
+src/util/gb-types.h: $(gnome_builder_type_headers) src/util/gb-types.h.template
+	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template src/util/gb-types.h.template $(gnome_builder_type_headers) ) > src/util/gb-types.h
+src/util/gb-types.c: $(gnome_builder_type_headers) src/util/gb-types.c.template
+	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template src/util/gb-types.c.template $(gnome_builder_type_headers) ) > src/util/gb-types.c
+
 nodist_gnome_builder_SOURCES = \
 	$(gnome_builder_built_sources) \
 	$(NULL)
 
 BUILT_SOURCES += $(gnome_builder_built_sources)
 
+EXTRA_DIST += \
+	src/util/gb-types.c.template \
+	src/util/gb-types.h.template
 EXTRA_DIST += $(resource_files)
 EXTRA_DIST += src/resources/gnome-builder.gresource.xml
 EXTRA_DIST += $(gnome_builder_built_sources)
