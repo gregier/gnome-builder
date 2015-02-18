@@ -45,6 +45,7 @@
 #include "gb-source-view.h"
 #include "gb-source-vim.h"
 #include "gb-source-emacs.h" 
+#include "gb-source-view-mode.h"
 #include "gb-widget.h"
 
 enum {
@@ -63,6 +64,7 @@ struct _GbSourceViewPrivate
   GbSourceVim                 *vim;
   GbSourceEmacs               *emacs;
   GtkCssProvider              *css_provider;
+  GbSourceViewMode            *mode;
 
   GSettings                   *language_settings;
   GSettings                   *editor_settings;
@@ -113,6 +115,7 @@ enum {
   PUSH_SNIPPET,
   REQUEST_DOCUMENTATION,
   DROP_URIS,
+  SET_MODE,
   LAST_SIGNAL
 };
 
@@ -1455,6 +1458,17 @@ gb_source_view_key_press_event (GtkWidget   *widget,
 
   priv = view->priv;
 
+  if (priv->mode)
+    {
+      gboolean handled, remove;
+      handled = gb_source_view_mode_do_event (priv->mode, event, &remove);
+      if (remove)
+        g_clear_object (&priv->mode);
+
+      if (handled)
+        return TRUE;
+    }
+
   /*
    * Handle movement through the tab stops of the current snippet if needed.
    */
@@ -1858,6 +1872,25 @@ gb_source_view_request_documentation (GbSourceView *view)
 }
 
 static void
+gb_source_view_set_mode (GbSourceView           *view,
+                         const gchar            *mode,
+                         gboolean                transient)
+{
+  GbSourceViewPrivate *priv = view->priv;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_VIEW (view));
+
+  g_clear_object (&priv->mode);
+
+  if (mode != NULL)
+    priv->mode = gb_source_view_mode_new (GTK_WIDGET (view), mode, GB_SOURCE_VIEW_MODE_TYPE_TRANSIENT);
+
+  EXIT;
+ }
+
+static void
 gb_source_view_grab_focus (GtkWidget *widget)
 {
   invalidate_window (GB_SOURCE_VIEW (widget));
@@ -2089,6 +2122,7 @@ gb_source_view_finalize (GObject *object)
   g_clear_object (&priv->vim);
   g_clear_object (&priv->emacs);
   g_clear_object (&priv->css_provider);
+  g_clear_object (&priv->mode);
 
   G_OBJECT_CLASS (gb_source_view_parent_class)->finalize (object);
 }
@@ -2223,6 +2257,7 @@ gb_source_view_class_init (GbSourceViewClass *klass)
   klass->draw_layer = gb_source_view_real_draw_layer;
   klass->display_documentation = gb_source_view_display_documentation;
   klass->request_documentation = gb_source_view_request_documentation;
+  klass->set_mode = gb_source_view_set_mode;
 
   gParamSpecs [PROP_ENABLE_WORD_COMPLETION] =
     g_param_spec_boolean ("enable-word-completion",
@@ -2385,6 +2420,18 @@ gb_source_view_class_init (GbSourceViewClass *klass)
                   G_TYPE_NONE,
                   1,
                   G_TYPE_STRV);
+
+  gSignals [SET_MODE] =
+    g_signal_new ("set-mode",
+                  GB_TYPE_SOURCE_VIEW,
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+                  G_STRUCT_OFFSET (GbSourceViewClass, set_mode),
+                  NULL, NULL,
+                  g_cclosure_marshal_generic,
+                  G_TYPE_NONE,
+                  2,
+                  G_TYPE_STRING,
+                  GB_TYPE_SOURCE_VIEW_MODE_TYPE);
 
   binding_set = gtk_binding_set_by_class (klass);
   gtk_binding_entry_add_signal (binding_set,
