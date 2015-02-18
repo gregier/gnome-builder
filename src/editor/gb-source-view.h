@@ -72,6 +72,10 @@ struct _GbSourceViewClass
   void (*set_mode)              (GbSourceView           *view,
                                  const gchar            *mode,
                                  gboolean                transient);
+  void (*action)                (GbSourceView           *view,
+                                 const gchar            *prefix,
+                                 const gchar            *action_name,
+                                 const gchar            *param);
 };
 
 void                  gb_source_view_begin_search         (GbSourceView         *view,

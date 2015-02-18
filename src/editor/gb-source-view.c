@@ -116,6 +116,7 @@ enum {
   REQUEST_DOCUMENTATION,
   DROP_URIS,
   SET_MODE,
+  ACTION,
   LAST_SIGNAL
 };
 
@@ -1891,6 +1892,43 @@ gb_source_view_set_mode (GbSourceView           *view,
  }
 
 static void
+gb_source_view_action (GbSourceView *view,
+                       const gchar *prefix,
+                       const gchar *action_name,
+                       const gchar *param)
+{
+  GVariant *variant = NULL;
+  GError *error;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_VIEW (view));
+
+  if (*param != 0)
+    {
+      error = NULL;
+      variant = g_variant_parse (NULL,
+                                 param,
+                                 NULL,
+                                 NULL,
+                                 &error);
+      if (variant == NULL)
+        {
+          g_warning ("can't parse keybinding parameters %s: %s\n",
+                     param, error->message);
+          g_error_free (error);
+          return;
+        }
+    }
+
+  gb_widget_activate_action (GTK_WIDGET (view), prefix, action_name, variant);
+
+  g_clear_pointer (&variant, g_variant_unref);
+
+  EXIT;
+}
+
+static void
 gb_source_view_grab_focus (GtkWidget *widget)
 {
   invalidate_window (GB_SOURCE_VIEW (widget));
@@ -2258,6 +2296,7 @@ gb_source_view_class_init (GbSourceViewClass *klass)
   klass->display_documentation = gb_source_view_display_documentation;
   klass->request_documentation = gb_source_view_request_documentation;
   klass->set_mode = gb_source_view_set_mode;
+  klass->action = gb_source_view_action;
 
   gParamSpecs [PROP_ENABLE_WORD_COMPLETION] =
     g_param_spec_boolean ("enable-word-completion",
@@ -2432,6 +2471,19 @@ gb_source_view_class_init (GbSourceViewClass *klass)
                   2,
                   G_TYPE_STRING,
                   GB_TYPE_SOURCE_VIEW_MODE_TYPE);
+
+  gSignals [ACTION] =
+    g_signal_new ("action",
+                  GB_TYPE_SOURCE_VIEW,
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+                  G_STRUCT_OFFSET (GbSourceViewClass, action),
+                  NULL, NULL,
+                  g_cclosure_marshal_generic,
+                  G_TYPE_NONE,
+                  3,
+                  G_TYPE_STRING,
+                  G_TYPE_STRING,
+                  G_TYPE_STRING);
 
   binding_set = gtk_binding_set_by_class (klass);
   gtk_binding_entry_add_signal (binding_set,
