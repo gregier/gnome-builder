@@ -37,6 +37,7 @@
 #include "gb-workbench.h"
 
 #define ADWAITA_CSS  "resource:///org/gnome/builder/css/builder.Adwaita.css"
+#define EMACS_CSS  "resource:///org/gnome/builder/css/emacs.css"
 #define LANGUAGE_SCHEMA "org.gnome.builder.editor.language"
 #define LANGUAGE_PATH "/org/gnome/builder/editor/language/"
 #define GSV_PATH "resource:///org/gnome/builder/styles/"
@@ -46,6 +47,7 @@ struct _GbApplicationPrivate
   GbKeybindings       *keybindings;
   GSettings           *editor_settings;
   GbPreferencesWindow *preferences_window;
+  GtkCssProvider      *emacs_provider;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbApplication, gb_application, GTK_TYPE_APPLICATION)
@@ -356,11 +358,28 @@ gb_application_emacs_mode_changed (GbApplication *self,
 
   if (g_settings_get_boolean (settings, "emacs-mode"))
     {
+      if (self->priv->emacs_provider == NULL)
+        {
+          GFile *file = g_file_new_for_uri (EMACS_CSS);
+          self->priv->emacs_provider = gtk_css_provider_new ();
+          gtk_css_provider_load_from_file (self->priv->emacs_provider, file, NULL);
+          g_object_unref (file);
+        }
+
+      gtk_style_context_add_provider_for_screen (gdk_screen_get_default (),
+                                                 GTK_STYLE_PROVIDER (self->priv->emacs_provider),
+                                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
       g_settings_set_boolean (settings, "vim-mode", FALSE);
       gb_application_load_keybindings (self, "emacs");
     }
   else
-    gb_application_load_keybindings (self, "default");
+    {
+      if (self->priv->emacs_provider)
+        gtk_style_context_remove_provider_for_screen (gdk_screen_get_default (),
+                                                      GTK_STYLE_PROVIDER (self->priv->emacs_provider));
+      gb_application_load_keybindings (self, "default");
+    }
 }
 
 static void

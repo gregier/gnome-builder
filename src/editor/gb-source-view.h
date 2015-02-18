@@ -24,7 +24,6 @@
 #include "gb-source-auto-indenter.h"
 #include "gb-source-snippet.h"
 #include "gb-source-vim.h"
-#include "gb-source-emacs.h"
 
 G_BEGIN_DECLS
 
@@ -96,7 +95,6 @@ void                  gb_source_view_set_overwrite_braces (GbSourceView         
 void                  gb_source_view_set_show_shadow      (GbSourceView         *view,
                                                            gboolean              show_shadow);
 GbSourceVim          *gb_source_view_get_vim              (GbSourceView         *view);
-GbSourceEmacs        *gb_source_view_get_emacs            (GbSourceView         *view);
 
 G_END_DECLS
 
