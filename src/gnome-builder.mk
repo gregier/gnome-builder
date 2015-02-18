@@ -97,6 +97,8 @@ libgnome_builder_la_SOURCES = \
 	src/editor/gb-source-search-highlighter.h \
 	src/editor/gb-source-view.c \
 	src/editor/gb-source-view.h \
+	src/editor/gb-source-view-mode.c \
+	src/editor/gb-source-view-mode.h \
 	src/emacs/gb-source-emacs.c \
 	src/emacs/gb-source-emacs.h \
 	src/fuzzy/fuzzy.c \
