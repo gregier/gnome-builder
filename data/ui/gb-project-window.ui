@@ -2,11 +2,64 @@
 <interface>
   <!-- interface-requires gtk+ 3.15 -->
   <template class="GbProjectWindow" parent="GtkApplicationWindow">
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
     <child type="titlebar">
       <object class="GtkHeaderBar">
         <property name="show-close-button">true</property>
         <property name="title" translatable="yes">Builder</property>
         <property name="visible">true</property>
+        <child>
+          <object class="GtkButton">
+            <property name="visible">true</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">list-add-symbolic</property>
+                <property name="visible">true</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="pack-type">start</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkMenuButton">
+            <property name="visible">true</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="visible">true</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="pack-type">end</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="select_button">
+            <property name="visible">true</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">object-select-symbolic</property>
+                <property name="visible">true</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="pack-type">end</property>
+          </packing>
+        </child>
         <child>
           <object class="GtkToggleButton">
             <property name="visible">true</property>
@@ -36,7 +89,7 @@
             <property name="vexpand">true</property>
             <property name="visible">true</property>
             <child>
-              <object class="GtkListBox">
+              <object class="GtkListBox" id="listbox">
                 <property name="visible">true</property>
               </object>
             </child>
