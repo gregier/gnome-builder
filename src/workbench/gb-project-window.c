@@ -34,6 +34,8 @@ struct _GbProjectWindow
   GtkApplicationWindow parent_instance;
 
   GtkListBox      *listbox;
+  GtkSearchBar    *search_bar;
+  GtkToggleButton *search_button;
   GtkToggleButton *select_button;
 };
 
@@ -328,6 +330,10 @@ gb_project_window_constructed (GObject *object)
                            self,
                            G_CONNECT_SWAPPED);
 
+  g_object_bind_property (self->search_button, "active",
+                          self->search_bar, "search-mode-enabled",
+                          G_BINDING_SYNC_CREATE);
+
   ide_project_miner_mine_async (miner,
                                 NULL,
                                 gb_project_window__miner_mine_cb,
@@ -394,6 +400,8 @@ gb_project_window_class_init (GbProjectWindowClass *klass)
   GB_WIDGET_CLASS_TEMPLATE (klass, "gb-project-window.ui");
 
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, listbox);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_bar);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_button);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, select_button);
 }
 
