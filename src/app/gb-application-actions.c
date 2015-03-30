@@ -180,11 +180,24 @@ gb_application_actions_about (GSimpleAction *action,
   gtk_window_present (GTK_WINDOW (dialog));
 }
 
+static void
+gb_application_actions_open_project (GSimpleAction *action,
+                                     GVariant *variant,
+                                     gpointer user_data)
+{
+  GbApplication *self = user_data;
+
+  g_assert (GB_IS_APPLICATION (self));
+
+  gb_application_show_projects_window (self);
+}
+
 static const GActionEntry GbApplicationActions[] = {
-  { "about",       gb_application_actions_about },
-  { "preferences", gb_application_actions_preferences },
-  { "quit",        gb_application_actions_quit },
-  { "support",     gb_application_actions_support },
+  { "about",        gb_application_actions_about },
+  { "open-project", gb_application_actions_open_project },
+  { "preferences",  gb_application_actions_preferences },
+  { "quit",         gb_application_actions_quit },
+  { "support",      gb_application_actions_support },
 };
 
 void

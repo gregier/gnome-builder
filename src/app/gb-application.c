@@ -467,19 +467,40 @@ gb_application_open (GApplication   *application,
   IDE_EXIT;
 }
 
-static void
-gb_application_activate (GApplication *application)
+void
+gb_application_show_projects_window (GbApplication *self)
 {
-  GbApplication *self = (GbApplication *)application;
   GbProjectWindow *window;
+  GList *windows;
 
   g_assert (GB_IS_APPLICATION (self));
+
+  windows = gtk_application_get_windows (GTK_APPLICATION (self));
+
+  for (; windows; windows = windows->next)
+    {
+      if (GB_IS_PROJECT_WINDOW (windows->data))
+        {
+          gtk_window_present (windows->data);
+          return;
+        }
+    }
 
   window = g_object_new (GB_TYPE_PROJECT_WINDOW,
                          "application", self,
                          NULL);
   gtk_window_maximize (GTK_WINDOW (window));
   gtk_window_present (GTK_WINDOW (window));
+}
+
+static void
+gb_application_activate (GApplication *application)
+{
+  GbApplication *self = (GbApplication *)application;
+
+  g_assert (GB_IS_APPLICATION (self));
+
+  gb_application_show_projects_window (self);
 }
 
 static void
