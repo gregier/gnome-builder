@@ -32,6 +32,7 @@
 #include "gb-editor-document.h"
 #include "gb-editor-workspace.h"
 #include "gb-glib.h"
+#include "gb-project-window.h"
 #include "gb-resources.h"
 #include "gb-workbench.h"
 
@@ -470,45 +471,15 @@ static void
 gb_application_activate (GApplication *application)
 {
   GbApplication *self = (GbApplication *)application;
-  const gchar *home_dir;
-  g_autofree gchar *current_dir = NULL;
-  g_autofree gchar *target_dir = NULL;
-  g_autoptr(GFile) directory = NULL;
-  g_autoptr(GTask) task = NULL;
+  GbProjectWindow *window;
 
-  g_return_if_fail (GB_IS_APPLICATION (self));
+  g_assert (GB_IS_APPLICATION (self));
 
-  /*
-   * FIXME:
-   *
-   * This is a stop gap until we get the project selection window in place.
-   * That will allow us to select previous projects and such.
-   */
-
-  home_dir = g_get_home_dir ();
-  current_dir = g_get_current_dir ();
-
-  if (g_str_equal (home_dir, current_dir))
-    target_dir = g_build_filename (home_dir, "Projects", NULL);
-  else
-    target_dir = g_strdup (current_dir);
-
-  if (!g_file_test (target_dir, G_FILE_TEST_EXISTS))
-    {
-      g_free (target_dir);
-      target_dir = g_strdup (home_dir);
-    }
-
-  directory = g_file_new_for_path (target_dir);
-
-  task = g_task_new (self, NULL, NULL, NULL);
-  g_task_set_task_data (task, g_ptr_array_new (), (GDestroyNotify)g_ptr_array_unref);
-
-  ide_context_new_async (directory,
-                         NULL,
-                         gb_application__context_new_cb,
-                         g_object_ref (task));
-  g_application_hold (application);
+  window = g_object_new (GB_TYPE_PROJECT_WINDOW,
+                         "application", self,
+                         NULL);
+  gtk_window_maximize (GTK_WINDOW (window));
+  gtk_window_present (GTK_WINDOW (window));
 }
 
 static void

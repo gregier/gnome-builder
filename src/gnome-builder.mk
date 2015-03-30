@@ -132,6 +132,8 @@ libgnome_builder_la_SOURCES = \
 	src/views/gb-view.h \
 	src/vim/gb-vim.c \
 	src/vim/gb-vim.h \
+	src/workbench/gb-project-window.c \
+	src/workbench/gb-project-window.h \
 	src/workbench/gb-workbench-actions.c \
 	src/workbench/gb-workbench-actions.h \
 	src/workbench/gb-workbench-private.h \
