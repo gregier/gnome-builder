@@ -34,6 +34,8 @@ struct _GbProjectWindow
 {
   GtkApplicationWindow parent_instance;
 
+  GSettings       *settings;
+
   GtkListBox      *listbox;
   GtkSearchBar    *search_bar;
   GtkToggleButton *search_button;
@@ -41,19 +43,6 @@ struct _GbProjectWindow
 };
 
 G_DEFINE_TYPE (GbProjectWindow, gb_project_window, GTK_TYPE_APPLICATION_WINDOW)
-
-enum {
-  PROP_0,
-  LAST_PROP
-};
-
-static GParamSpec *gParamSpecs [LAST_PROP];
-
-GbProjectWindow *
-gb_project_window_new (void)
-{
-  return g_object_new (GB_TYPE_PROJECT_WINDOW, NULL);
-}
 
 static void
 get_default_size (GtkRequisition *req)
@@ -141,7 +130,14 @@ gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
   g_assert (GTK_IS_LIST_BOX (listbox));
 
   project_info = g_object_get_data (G_OBJECT (row), "IDE_PROJECT_INFO");
-  g_assert (IDE_IS_PROJECT_INFO (project_info));
+  g_assert (!project_info || IDE_IS_PROJECT_INFO (project_info));
+
+  if (project_info == NULL)
+    {
+      gtk_container_foreach (GTK_CONTAINER (listbox), (GtkCallback)gtk_widget_show, NULL);
+      gtk_widget_hide (GTK_WIDGET (row));
+      return;
+    }
 
   directory = ide_project_info_get_directory (project_info);
   file = ide_project_info_get_file (project_info);
@@ -155,25 +151,66 @@ gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
                          g_object_ref (self));
 }
 
+static gboolean
+is_recent_project (GbProjectWindow *self,
+                   IdeProjectInfo  *info)
+{
+  gchar *uri;
+  gboolean ret = FALSE;
+  gchar **strv;
+  GFile *file;
+  gsize i;
+
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (G_IS_SETTINGS (self->settings));
+  g_assert (IDE_IS_PROJECT_INFO (info));
+
+  file = ide_project_info_get_file (info);
+  uri = g_file_get_uri (file);
+  strv = g_settings_get_strv (self->settings, "project-history");
+
+  for (i = 0; strv [i]; i++)
+    {
+      if (g_str_equal (strv [i], uri))
+        {
+          ret = TRUE;
+          break;
+        }
+    }
+
+  g_strfreev (strv);
+  g_free (uri);
+
+  return ret;
+}
+
 static GtkWidget *
 create_row (GbProjectWindow *self,
             IdeProjectInfo  *project_info)
 {
-  g_autofree gchar *markup = NULL;
+  g_autofree gchar *relative_path = NULL;
   const gchar *name;
   GtkListBoxRow *row;
   GtkBox *box;
+  GtkBox *vbox;
   GtkImage *image;
   GtkArrow *arrow;
   GtkLabel *label;
+  GtkLabel *label2;
   GtkCheckButton *check;
   GtkRevealer *revealer;
+  GFile *directory;
+  const gchar *icon_name = "folder";
+  g_autoptr(GFile) home = NULL;
 
   g_assert (GB_IS_PROJECT_WINDOW (self));
   g_assert (IDE_IS_PROJECT_INFO (project_info));
 
   name = ide_project_info_get_name (project_info);
-  markup = g_strdup_printf ("<b>%s</b>", name);
+  directory = ide_project_info_get_directory (project_info);
+
+  home = g_file_new_for_path (g_get_home_dir ());
+  relative_path = g_file_get_relative_path (home, directory);
 
   row = g_object_new (GTK_TYPE_LIST_BOX_ROW,
                       "visible", TRUE,
@@ -193,21 +230,39 @@ create_row (GbProjectWindow *self,
                         "visible", TRUE,
                         NULL);
 
+  if (!g_file_is_native (directory))
+    icon_name = "folder-remote";
+
   image = g_object_new (GTK_TYPE_IMAGE,
-                        "icon-name", "folder",
+                        "icon-name", icon_name,
                         "pixel-size", 32,
                         "margin-end", 12,
                         "margin-start", 12,
                         "visible", TRUE,
                         NULL);
 
+  vbox = g_object_new (GTK_TYPE_BOX,
+                       "orientation", GTK_ORIENTATION_VERTICAL,
+                       "visible", TRUE,
+                       NULL);
+
   label = g_object_new (GTK_TYPE_LABEL,
-                        "label", markup,
+                        "label", name,
                         "hexpand", TRUE,
                         "use-markup", TRUE,
                         "visible", TRUE,
                         "xalign", 0.0f,
                         NULL);
+  gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (label)), "title");
+
+  label2 = g_object_new (GTK_TYPE_LABEL,
+                         "label", relative_path,
+                         "hexpand", TRUE,
+                         "use-markup", TRUE,
+                         "visible", TRUE,
+                         "xalign", 0.0f,
+                         NULL);
+  gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (label2)), "dim-label");
 
   revealer = g_object_new (GTK_TYPE_REVEALER,
                            "reveal-child", FALSE,
@@ -228,7 +283,9 @@ create_row (GbProjectWindow *self,
   gtk_container_add (GTK_CONTAINER (revealer), GTK_WIDGET (check));
   gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (revealer));
   gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (image));
-  gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (label));
+  gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (vbox));
+  gtk_container_add (GTK_CONTAINER (vbox), GTK_WIDGET (label));
+  gtk_container_add (GTK_CONTAINER (vbox), GTK_WIDGET (label2));
   gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (arrow));
   gtk_container_add (GTK_CONTAINER (row), GTK_WIDGET (box));
 
@@ -247,7 +304,8 @@ gb_project_window__miner_discovered_cb (GbProjectWindow *self,
   g_assert (IDE_IS_PROJECT_MINER (miner));
 
   row = create_row (self, project_info);
-
+  if (!is_recent_project (self, project_info))
+    gtk_widget_set_visible (row, FALSE);
   gtk_container_add (GTK_CONTAINER (self->listbox), row);
 }
 
@@ -301,8 +359,14 @@ gb_project_window__listbox_sort (GtkListBoxRow *row1,
   info1 = g_object_get_data (G_OBJECT (row1), "IDE_PROJECT_INFO");
   info2 = g_object_get_data (G_OBJECT (row2), "IDE_PROJECT_INFO");
 
-  g_assert (IDE_IS_PROJECT_INFO (info1));
-  g_assert (IDE_IS_PROJECT_INFO (info2));
+  g_assert (!info1 || IDE_IS_PROJECT_INFO (info1));
+  g_assert (!info2 || IDE_IS_PROJECT_INFO (info2));
+
+  if (!info1)
+    return 1;
+
+  if (!info2)
+    return -1;
 
   name1 = ide_project_info_get_name (info1);
   name2 = ide_project_info_get_name (info2);
@@ -355,37 +419,9 @@ gb_project_window_finalize (GObject *object)
 {
   GbProjectWindow *self = (GbProjectWindow *)object;
 
+  g_clear_object (&self->settings);
+
   G_OBJECT_CLASS (gb_project_window_parent_class)->finalize (object);
-}
-
-static void
-gb_project_window_get_property (GObject    *object,
-                                guint       prop_id,
-                                GValue     *value,
-                                GParamSpec *pspec)
-{
-  GbProjectWindow *self = GB_PROJECT_WINDOW (object);
-
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
-}
-
-static void
-gb_project_window_set_property (GObject      *object,
-                                guint         prop_id,
-                                const GValue *value,
-                                GParamSpec   *pspec)
-{
-  GbProjectWindow *self = GB_PROJECT_WINDOW (object);
-
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
 }
 
 static void
@@ -395,8 +431,6 @@ gb_project_window_class_init (GbProjectWindowClass *klass)
 
   object_class->constructed = gb_project_window_constructed;
   object_class->finalize = gb_project_window_finalize;
-  object_class->get_property = gb_project_window_get_property;
-  object_class->set_property = gb_project_window_set_property;
 
   GB_WIDGET_CLASS_TEMPLATE (klass, "gb-project-window.ui");
 
@@ -418,4 +452,6 @@ gb_project_window_init (GbProjectWindow *self)
                            G_CALLBACK (gb_project_window__listbox_row_activated_cb),
                            self,
                            G_CONNECT_SWAPPED);
+
+  self->settings = g_settings_new ("org.gnome.builder");
 }
