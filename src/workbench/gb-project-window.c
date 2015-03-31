@@ -26,6 +26,7 @@
 
 #include "gb-editor-document.h"
 #include "gb-project-window.h"
+#include "gb-scrolled-window.h"
 #include "gb-widget.h"
 #include "gb-workbench.h"
 
@@ -194,7 +195,7 @@ create_row (GbProjectWindow *self,
 
   image = g_object_new (GTK_TYPE_IMAGE,
                         "icon-name", "folder",
-                        "pixel-size", 64,
+                        "pixel-size", 32,
                         "margin-end", 12,
                         "margin-start", 12,
                         "visible", TRUE,
@@ -403,6 +404,8 @@ gb_project_window_class_init (GbProjectWindowClass *klass)
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_bar);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_button);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, select_button);
+
+  g_type_ensure (GB_TYPE_SCROLLED_WINDOW);
 }
 
 static void
