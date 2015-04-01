@@ -39,6 +39,7 @@ struct _GbProjectWindow
   GtkListBox      *listbox;
   GtkSearchBar    *search_bar;
   GtkToggleButton *search_button;
+  GtkRevealer     *search_revealer;
   GtkToggleButton *select_button;
 };
 
@@ -396,7 +397,7 @@ gb_project_window_constructed (GObject *object)
                            G_CONNECT_SWAPPED);
 
   g_object_bind_property (self->search_button, "active",
-                          self->search_bar, "search-mode-enabled",
+                          self->search_revealer, "reveal-child",
                           G_BINDING_SYNC_CREATE);
 
   ide_project_miner_mine_async (miner,
@@ -437,6 +438,7 @@ gb_project_window_class_init (GbProjectWindowClass *klass)
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, listbox);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_bar);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_revealer);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, select_button);
 
   g_type_ensure (GB_TYPE_SCROLLED_WINDOW);
