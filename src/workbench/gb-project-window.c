@@ -36,13 +36,16 @@ struct _GbProjectWindow
 
   GSettings       *settings;
 
+  GList           *selected;
+
+  GtkActionBar    *action_bar;
   GtkButton       *cancel_button;
+  GtkButton       *delete_button;
   GtkHeaderBar    *header_bar;
   GtkListBox      *listbox;
   GtkButton       *new_button;
   GtkSearchBar    *search_bar;
   GtkToggleButton *search_button;
-  GtkRevealer     *search_revealer;
   GtkToggleButton *select_button;
 };
 
@@ -61,6 +64,37 @@ get_default_size (GtkRequisition *req)
 
   req->width = rect.width * 0.75;
   req->height = rect.height * 0.75;
+}
+
+static void
+gb_project_window__check_toggled (GbProjectWindow *self,
+                                  GtkCheckButton  *check_button)
+{
+  GtkWidget *row;
+
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GTK_IS_CHECK_BUTTON (check_button));
+
+  for (row = GTK_WIDGET (check_button);
+       (row != NULL) && !GTK_IS_LIST_BOX_ROW (row);
+       row = gtk_widget_get_parent (row))
+    {
+      /* Do Nothing */
+    }
+
+  if (row == NULL)
+    return;
+
+  if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (check_button)))
+    {
+      self->selected = g_list_prepend (self->selected, row);
+    }
+  else
+    {
+      self->selected = g_list_remove (self->selected, row);
+    }
+
+  gtk_widget_set_sensitive (GTK_WIDGET (self->delete_button), !!self->selected);
 }
 
 static IdeBuffer *
@@ -132,6 +166,26 @@ gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
   g_assert (GB_IS_PROJECT_WINDOW (self));
   g_assert (GTK_IS_LIST_BOX_ROW (row));
   g_assert (GTK_IS_LIST_BOX (listbox));
+
+  /*
+   * If we are in selection mode, just select the row instead.
+   */
+  if (gtk_toggle_button_get_active (self->select_button))
+    {
+      GtkToggleButton *check;
+
+      check = g_object_get_data (G_OBJECT (row), "CHECK_BUTTON");
+
+      if (check != NULL)
+        {
+          gboolean active;
+
+          active = gtk_toggle_button_get_active (check);
+          gtk_toggle_button_set_active (check, !active);
+        }
+
+      return;
+    }
 
   project_info = g_object_get_data (G_OBJECT (row), "IDE_PROJECT_INFO");
   g_assert (!project_info || IDE_IS_PROJECT_INFO (project_info));
@@ -231,8 +285,15 @@ create_row (GbProjectWindow *self,
                       NULL);
 
   check = g_object_new (GTK_TYPE_CHECK_BUTTON,
+                        "vexpand", FALSE,
+                        "valign", GTK_ALIGN_CENTER,
                         "visible", TRUE,
                         NULL);
+  g_signal_connect_object (check,
+                           "toggled",
+                           G_CALLBACK (gb_project_window__check_toggled),
+                           self,
+                           G_CONNECT_SWAPPED);
 
   if (!g_file_is_native (directory))
     icon_name = "folder-remote";
@@ -294,6 +355,8 @@ create_row (GbProjectWindow *self,
   gtk_container_add (GTK_CONTAINER (vbox), GTK_WIDGET (label2));
   gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (arrow));
   gtk_container_add (GTK_CONTAINER (row), GTK_WIDGET (box));
+
+  g_object_set_data (G_OBJECT (row), "CHECK_BUTTON", check);
 
   return GTK_WIDGET (row);
 }
@@ -403,6 +466,7 @@ gb_project_window__select_button_notify_active (GbProjectWindow *self,
 
   if (active)
     {
+      gtk_widget_set_visible (GTK_WIDGET (self->action_bar), TRUE);
       gtk_widget_set_visible (GTK_WIDGET (self->new_button), FALSE);
       gtk_widget_set_visible (GTK_WIDGET (self->select_button), FALSE);
       gtk_widget_set_visible (GTK_WIDGET (self->cancel_button), TRUE);
@@ -412,6 +476,7 @@ gb_project_window__select_button_notify_active (GbProjectWindow *self,
   else
     {
       gtk_style_context_remove_class (style_context, "selection-mode");
+      gtk_widget_set_visible (GTK_WIDGET (self->action_bar), FALSE);
       gtk_widget_set_visible (GTK_WIDGET (self->new_button), TRUE);
       gtk_widget_set_visible (GTK_WIDGET (self->select_button), TRUE);
       gtk_widget_set_visible (GTK_WIDGET (self->cancel_button), FALSE);
@@ -423,10 +488,28 @@ static void
 gb_project_window__cancel_button_clicked (GbProjectWindow *self,
                                           GtkButton       *cancel_button)
 {
+  GList *rows;
+  GList *iter;
+
   g_assert (GB_IS_PROJECT_WINDOW (self));
   g_assert (GTK_IS_BUTTON (cancel_button));
 
   gtk_toggle_button_set_active (self->select_button, FALSE);
+
+  rows = gtk_container_get_children (GTK_CONTAINER (self->listbox));
+  for (iter = rows; iter; iter = iter->next)
+    {
+      GtkToggleButton *check;
+
+      check = g_object_get_data (iter->data, "CHECK_BUTTON");
+
+      if (check != NULL)
+        gtk_toggle_button_set_active (check, FALSE);
+    }
+  g_list_free (rows);
+
+  g_list_free (self->selected);
+  self->selected = NULL;
 }
 
 static void
@@ -446,8 +529,8 @@ gb_project_window_constructed (GObject *object)
                            G_CONNECT_SWAPPED);
 
   g_object_bind_property (self->search_button, "active",
-                          self->search_revealer, "reveal-child",
-                          G_BINDING_SYNC_CREATE);
+                          self->search_bar, "search-mode-enabled",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
   g_signal_connect_object (self->select_button,
                            "notify::active",
@@ -497,13 +580,14 @@ gb_project_window_class_init (GbProjectWindowClass *klass)
 
   GB_WIDGET_CLASS_TEMPLATE (klass, "gb-project-window.ui");
 
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, action_bar);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, cancel_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, delete_button);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, header_bar);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, new_button);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, listbox);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_bar);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_button);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_revealer);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, select_button);
 
   g_type_ensure (GB_TYPE_SCROLLED_WINDOW);
