@@ -480,14 +480,14 @@ gb_application_show_projects_window (GbApplication *self)
 
   for (; windows; windows = windows->next)
     {
-      if (GB_IS_INITIAL_SETUP_DIALOG (windows->data))
+      if (GB_IS_PROJECT_WINDOW (windows->data))
         {
           gtk_window_present (windows->data);
           return;
         }
     }
 
-  window = g_object_new (GB_TYPE_INITIAL_SETUP_DIALOG,
+  window = g_object_new (GB_TYPE_PROJECT_WINDOW,
                          "application", self,
                          NULL);
   gtk_window_maximize (GTK_WINDOW (window));

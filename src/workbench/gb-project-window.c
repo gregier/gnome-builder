@@ -36,7 +36,10 @@ struct _GbProjectWindow
 
   GSettings       *settings;
 
+  GtkButton       *cancel_button;
+  GtkHeaderBar    *header_bar;
   GtkListBox      *listbox;
+  GtkButton       *new_button;
   GtkSearchBar    *search_bar;
   GtkToggleButton *search_button;
   GtkRevealer     *search_revealer;
@@ -222,9 +225,9 @@ create_row (GbProjectWindow *self,
                           g_object_unref);
 
   box = g_object_new (GTK_TYPE_BOX,
+                      "margin", 12,
                       "orientation", GTK_ORIENTATION_HORIZONTAL,
                       "visible", TRUE,
-                      "margin", 12,
                       NULL);
 
   check = g_object_new (GTK_TYPE_CHECK_BUTTON,
@@ -236,7 +239,7 @@ create_row (GbProjectWindow *self,
 
   image = g_object_new (GTK_TYPE_IMAGE,
                         "icon-name", icon_name,
-                        "pixel-size", 32,
+                        "pixel-size", 64,
                         "margin-end", 12,
                         "margin-start", 12,
                         "visible", TRUE,
@@ -244,6 +247,8 @@ create_row (GbProjectWindow *self,
 
   vbox = g_object_new (GTK_TYPE_BOX,
                        "orientation", GTK_ORIENTATION_VERTICAL,
+                       "valign", GTK_ALIGN_CENTER,
+                       "vexpand", TRUE,
                        "visible", TRUE,
                        NULL);
 
@@ -305,8 +310,10 @@ gb_project_window__miner_discovered_cb (GbProjectWindow *self,
   g_assert (IDE_IS_PROJECT_MINER (miner));
 
   row = create_row (self, project_info);
+#if 0
   if (!is_recent_project (self, project_info))
     gtk_widget_set_visible (row, FALSE);
+#endif
   gtk_container_add (GTK_CONTAINER (self->listbox), row);
 }
 
@@ -381,6 +388,48 @@ gb_project_window__listbox_sort (GtkListBoxRow *row1,
 }
 
 static void
+gb_project_window__select_button_notify_active (GbProjectWindow *self,
+                                                GParamSpec      *pspec,
+                                                GtkToggleButton *select_button)
+{
+  GtkStyleContext *style_context;
+  gboolean active;
+
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GTK_IS_TOGGLE_BUTTON (select_button));
+
+  active = gtk_toggle_button_get_active (select_button);
+  style_context = gtk_widget_get_style_context (GTK_WIDGET (self->header_bar));
+
+  if (active)
+    {
+      gtk_widget_set_visible (GTK_WIDGET (self->new_button), FALSE);
+      gtk_widget_set_visible (GTK_WIDGET (self->select_button), FALSE);
+      gtk_widget_set_visible (GTK_WIDGET (self->cancel_button), TRUE);
+      gtk_header_bar_set_show_close_button (self->header_bar, FALSE);
+      gtk_style_context_add_class (style_context, "selection-mode");
+    }
+  else
+    {
+      gtk_style_context_remove_class (style_context, "selection-mode");
+      gtk_widget_set_visible (GTK_WIDGET (self->new_button), TRUE);
+      gtk_widget_set_visible (GTK_WIDGET (self->select_button), TRUE);
+      gtk_widget_set_visible (GTK_WIDGET (self->cancel_button), FALSE);
+      gtk_header_bar_set_show_close_button (self->header_bar, TRUE);
+    }
+}
+
+static void
+gb_project_window__cancel_button_clicked (GbProjectWindow *self,
+                                          GtkButton       *cancel_button)
+{
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GTK_IS_BUTTON (cancel_button));
+
+  gtk_toggle_button_set_active (self->select_button, FALSE);
+}
+
+static void
 gb_project_window_constructed (GObject *object)
 {
   GbProjectWindow *self = (GbProjectWindow *)object;
@@ -400,17 +449,30 @@ gb_project_window_constructed (GObject *object)
                           self->search_revealer, "reveal-child",
                           G_BINDING_SYNC_CREATE);
 
-  ide_project_miner_mine_async (miner,
-                                NULL,
-                                gb_project_window__miner_mine_cb,
-                                g_object_ref (self));
+  g_signal_connect_object (self->select_button,
+                           "notify::active",
+                           G_CALLBACK (gb_project_window__select_button_notify_active),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (self->cancel_button,
+                           "clicked",
+                           G_CALLBACK (gb_project_window__cancel_button_clicked),
+                           self,
+                           G_CONNECT_SWAPPED);
 
   gtk_list_box_set_header_func (self->listbox,
                                 gb_project_window__listbox_header_cb,
                                 NULL, NULL);
+
   gtk_list_box_set_sort_func (self->listbox,
                               gb_project_window__listbox_sort,
                               NULL, NULL);
+
+  ide_project_miner_mine_async (miner,
+                                NULL,
+                                gb_project_window__miner_mine_cb,
+                                g_object_ref (self));
 
   G_OBJECT_CLASS (gb_project_window_parent_class)->constructed (object);
 }
@@ -435,6 +497,9 @@ gb_project_window_class_init (GbProjectWindowClass *klass)
 
   GB_WIDGET_CLASS_TEMPLATE (klass, "gb-project-window.ui");
 
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, cancel_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, header_bar);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, new_button);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, listbox);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_bar);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_button);
