@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.15 -->
+  <template class="GbInitialSetupDialog" parent="GtkApplicationWindow">
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="header_bar">
+        <property name="show-close-button">true</property>
+        <property name="visible">true</property>
+        <child>
+          <object class="GtkButton" id="back_button">
+            <property name="visible">false</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">go-previous-symbolic</property>
+                <property name="visible">true</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkStack" id="stack">
+        <property name="expand">true</property>
+        <property name="transition-type">slide-left-right</property>
+        <property name="visible">true</property>
+        <child>
+          <object class="GtkBox" id="page_select_project">
+            <property name="orientation">vertical</property>
+            <property name="visible">true</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="expand">true</property>
+                <property name="visible">true</property>
+                <child type="center">
+                  <object class="GbScrolledWindow">
+                    <property name="valign">center</property>
+                    <property name="vexpand">false</property>
+                    <property name="halign">center</property>
+                    <property name="hexpand">false</property>
+                    <property name="max-content-height">600</property>
+                    <property name="max-content-width">500</property>
+                    <property name="min-content-height">100</property>
+                    <property name="min-content-width">400</property>
+                    <property name="shadow-type">in</property>
+                    <property name="visible">true</property>
+                    <child>
+                      <object class="GtkListBox" id="select_list_box">
+                        <property name="selection-mode">none</property>
+                        <property name="visible">true</property>
+                        <child>
+                          <object class="GtkListBoxRow" id="row_new_project">
+                            <property name="activatable">true</property>
+                            <property name="visible">true</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="margin">12</property>
+                                <property name="visible">true</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">New Project</property>
+                                    <property name="hexpand">true</property>
+                                    <property name="visible">true</property>
+                                    <property name="xalign">0.0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkArrow">
+                                    <property name="arrow-type">right</property>
+                                    <property name="hexpand">false</property>
+                                    <property name="visible">true</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkListBoxRow" id="row_open_project">
+                            <property name="visible">true</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="margin">12</property>
+                                <property name="visible">true</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Open Project</property>
+                                    <property name="hexpand">true</property>
+                                    <property name="visible">true</property>
+                                    <property name="xalign">0.0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkArrow">
+                                    <property name="arrow-type">right</property>
+                                    <property name="hexpand">false</property>
+                                    <property name="visible">true</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkListBoxRow" id="row_recent_projects">
+                            <property name="visible">true</property>
+                            <property name="activatable">false</property>
+                            <property name="selectable">false</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="margin">12</property>
+                                <property name="visible">true</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Recent Projects</property>
+                                    <property name="hexpand">true</property>
+                                    <property name="visible">true</property>
+                                    <property name="xalign">0.0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkListBoxRow" id="row_view_more">
+                            <property name="visible">true</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="margin">12</property>
+                                <property name="icon-name">view-more-symbolic</property>
+                                <property name="visible">true</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="page_open_project">
+            <property name="orientation">vertical</property>
+            <property name="visible">true</property>
+            <child>
+              <object class="GtkBox">
+                <property name="expand">true</property>
+                <property name="visible">true</property>
+                <child type="center">
+                  <object class="GbScrolledWindow">
+                    <property name="halign">center</property>
+                    <property name="hexpand">false</property>
+                    <property name="max-content-height">600</property>
+                    <property name="max-content-width">500</property>
+                    <property name="min-content-height">20</property>
+                    <property name="min-content-width">400</property>
+                    <property name="shadow-type">in</property>
+                    <property name="valign">center</property>
+                    <property name="vexpand">false</property>
+                    <property name="visible">true</property>
+                    <child>
+                      <object class="GtkListBox" id="open_list_box">
+                        <property name="selection-mode">none</property>
+                        <property name="visible">true</property>
+                        <child>
+                          <object class="GtkListBoxRow" id="row_open_existing_project">
+                            <property name="visible">true</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="margin">12</property>
+                                <property name="spacing">12</property>
+                                <property name="visible">true</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">folder</property>
+                                    <property name="pixel-size">32</property>
+                                    <property name="visible">true</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">From existing project on this computer</property>
+                                    <property name="hexpand">true</property>
+                                    <property name="visible">true</property>
+                                    <property name="xalign">0.0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkListBoxRow" id="row_open_remove_project">
+                            <property name="visible">true</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="margin">12</property>
+                                <property name="spacing">12</property>
+                                <property name="visible">true</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">gitg</property>
+                                    <property name="pixel-size">32</property>
+                                    <property name="visible">true</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">From remote source code repository</property>
+                                    <property name="hexpand">true</property>
+                                    <property name="visible">true</property>
+                                    <property name="xalign">0.0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="page_new_project">
+            <property name="orientation">vertical</property>
+            <property name="expand">true</property>
+            <property name="visible">true</property>
+            <child type="center">
+              <object class="GtkGrid">
+                <property name="column-spacing">12</property>
+                <property name="row-spacing">12</property>
+                <property name="halign">center</property>
+                <property name="hexpand">false</property>
+                <property name="valign">center</property>
+                <property name="vexpand">false</property>
+                <property name="visible">true</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Name</property>
+                    <property name="visible">true</property>
+                    <property name="xalign">1.0</property>
+                    <style>
+                      <class name="dim-label"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="width">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry">
+                    <property name="hexpand">true</property>
+                    <property name="width-chars">35</property>
+                    <property name="visible">true</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="width">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Location</property>
+                    <property name="visible">true</property>
+                    <property name="xalign">1.0</property>
+                    <style>
+                      <class name="dim-label"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="top-attach">1</property>
+                    <property name="left-attach">0</property>
+                    <property name="width">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFileChooserButton">
+                    <property name="action">select-folder</property>
+                    <property name="width-chars">35</property>
+                    <property name="hexpand">true</property>
+                    <property name="visible">true</property>
+                  </object>
+                  <packing>
+                    <property name="top-attach">1</property>
+                    <property name="left-attach">1</property>
+                    <property name="width">2</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

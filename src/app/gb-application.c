@@ -32,6 +32,7 @@
 #include "gb-editor-document.h"
 #include "gb-editor-workspace.h"
 #include "gb-glib.h"
+#include "gb-initial-setup-dialog.h"
 #include "gb-project-window.h"
 #include "gb-resources.h"
 #include "gb-workbench.h"
@@ -479,14 +480,14 @@ gb_application_show_projects_window (GbApplication *self)
 
   for (; windows; windows = windows->next)
     {
-      if (GB_IS_PROJECT_WINDOW (windows->data))
+      if (GB_IS_INITIAL_SETUP_DIALOG (windows->data))
         {
           gtk_window_present (windows->data);
           return;
         }
     }
 
-  window = g_object_new (GB_TYPE_PROJECT_WINDOW,
+  window = g_object_new (GB_TYPE_INITIAL_SETUP_DIALOG,
                          "application", self,
                          NULL);
   gtk_window_maximize (GTK_WINDOW (window));
