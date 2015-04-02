@@ -503,7 +503,7 @@ gb_project_window__select_button_notify_active (GbProjectWindow *self,
       gtk_widget_set_visible (GTK_WIDGET (self->select_button), TRUE);
       gtk_widget_set_visible (GTK_WIDGET (self->cancel_button), FALSE);
       gtk_header_bar_set_show_close_button (self->header_bar, TRUE);
-      gtk_header_bar_set_title (self->header_bar, _("Builder"));
+      gtk_header_bar_set_title (self->header_bar, _("Select Project"));
     }
 }
 

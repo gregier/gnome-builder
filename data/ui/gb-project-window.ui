@@ -7,7 +7,7 @@
     <child type="titlebar">
       <object class="GtkHeaderBar" id="header_bar">
         <property name="show-close-button">true</property>
-        <property name="title" translatable="yes">Builder</property>
+        <property name="title" translatable="yes">Select Project</property>
         <property name="visible">true</property>
         <child>
           <object class="GtkButton" id="new_button">
