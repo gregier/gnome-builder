@@ -86,13 +86,9 @@ gb_project_window__check_toggled (GbProjectWindow *self,
     return;
 
   if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (check_button)))
-    {
-      self->selected = g_list_prepend (self->selected, row);
-    }
+    self->selected = g_list_prepend (self->selected, row);
   else
-    {
-      self->selected = g_list_remove (self->selected, row);
-    }
+    self->selected = g_list_remove (self->selected, row);
 
   gtk_widget_set_sensitive (GTK_WIDGET (self->delete_button), !!self->selected);
 }
@@ -471,6 +467,7 @@ gb_project_window__select_button_notify_active (GbProjectWindow *self,
       gtk_widget_set_visible (GTK_WIDGET (self->select_button), FALSE);
       gtk_widget_set_visible (GTK_WIDGET (self->cancel_button), TRUE);
       gtk_header_bar_set_show_close_button (self->header_bar, FALSE);
+      gtk_header_bar_set_title (self->header_bar, _("(Click on items to select them)"));
       gtk_style_context_add_class (style_context, "selection-mode");
     }
   else
@@ -481,6 +478,7 @@ gb_project_window__select_button_notify_active (GbProjectWindow *self,
       gtk_widget_set_visible (GTK_WIDGET (self->select_button), TRUE);
       gtk_widget_set_visible (GTK_WIDGET (self->cancel_button), FALSE);
       gtk_header_bar_set_show_close_button (self->header_bar, TRUE);
+      gtk_header_bar_set_title (self->header_bar, _("Builder"));
     }
 }
 
@@ -494,8 +492,10 @@ gb_project_window__cancel_button_clicked (GbProjectWindow *self,
   g_assert (GB_IS_PROJECT_WINDOW (self));
   g_assert (GTK_IS_BUTTON (cancel_button));
 
+  /* reset back to normal mode */
   gtk_toggle_button_set_active (self->select_button, FALSE);
 
+  /* uncheck rows */
   rows = gtk_container_get_children (GTK_CONTAINER (self->listbox));
   for (iter = rows; iter; iter = iter->next)
     {
@@ -508,8 +508,8 @@ gb_project_window__cancel_button_clicked (GbProjectWindow *self,
     }
   g_list_free (rows);
 
-  g_list_free (self->selected);
-  self->selected = NULL;
+  /* clear selection list */
+  g_clear_pointer (&self->selected, (GDestroyNotify)g_list_free);
 }
 
 static void
@@ -566,6 +566,7 @@ gb_project_window_finalize (GObject *object)
   GbProjectWindow *self = (GbProjectWindow *)object;
 
   g_clear_object (&self->settings);
+  g_clear_pointer (&self->selected, (GDestroyNotify)g_list_free);
 
   G_OBJECT_CLASS (gb_project_window_parent_class)->finalize (object);
 }
