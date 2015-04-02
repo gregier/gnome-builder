@@ -23,6 +23,7 @@
 #define G_LOG_DOMAIN "gb-project-window"
 
 #include <glib/gi18n.h>
+#include <string.h>
 
 #include "gb-editor-document.h"
 #include "gb-project-window.h"
@@ -36,6 +37,7 @@ struct _GbProjectWindow
 
   GSettings       *settings;
 
+  gchar           *search_text;
   GList           *selected;
 
   GtkActionBar    *action_bar;
@@ -46,6 +48,7 @@ struct _GbProjectWindow
   GtkButton       *new_button;
   GtkSearchBar    *search_bar;
   GtkToggleButton *search_button;
+  GtkSearchEntry  *search_entry;
   GtkToggleButton *select_button;
 };
 
@@ -446,6 +449,30 @@ gb_project_window__listbox_sort (GtkListBoxRow *row1,
     return strcasecmp (name1, name2);
 }
 
+static gboolean
+gb_project_window__listbox_filter (GtkListBoxRow *row,
+                                   gpointer       user_data)
+{
+  GbProjectWindow *self = user_data;
+  IdeProjectInfo *info;
+  const gchar *name;
+
+  g_assert (GTK_IS_LIST_BOX_ROW (row));
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+
+  info = g_object_get_data (G_OBJECT (row), "IDE_PROJECT_INFO");
+
+  if (info == NULL || self->search_text == NULL)
+    return TRUE;
+
+  name = ide_project_info_get_name (info);
+
+  if (strstr (name, self->search_text) == NULL)
+    return FALSE;
+
+  return TRUE;
+}
+
 static void
 gb_project_window__select_button_notify_active (GbProjectWindow *self,
                                                 GParamSpec      *pspec,
@@ -513,6 +540,19 @@ gb_project_window__cancel_button_clicked (GbProjectWindow *self,
 }
 
 static void
+gb_project_window__search_entry_changed (GbProjectWindow *self,
+                                         GtkEntry        *entry)
+{
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GTK_IS_ENTRY (entry));
+
+  g_clear_pointer (&self->search_text, g_free);
+  self->search_text = g_strdup (gtk_entry_get_text (entry));
+
+  gtk_list_box_invalidate_filter (self->listbox);
+}
+
+static void
 gb_project_window_constructed (GObject *object)
 {
   GbProjectWindow *self = (GbProjectWindow *)object;
@@ -531,6 +571,12 @@ gb_project_window_constructed (GObject *object)
   g_object_bind_property (self->search_button, "active",
                           self->search_bar, "search-mode-enabled",
                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  g_signal_connect_object (self->search_entry,
+                           "changed",
+                           G_CALLBACK (gb_project_window__search_entry_changed),
+                           self,
+                           G_CONNECT_SWAPPED);
 
   g_signal_connect_object (self->select_button,
                            "notify::active",
@@ -552,6 +598,10 @@ gb_project_window_constructed (GObject *object)
                               gb_project_window__listbox_sort,
                               NULL, NULL);
 
+  gtk_list_box_set_filter_func (self->listbox,
+                                gb_project_window__listbox_filter,
+                                self, NULL);
+
   ide_project_miner_mine_async (miner,
                                 NULL,
                                 gb_project_window__miner_mine_cb,
@@ -567,6 +617,7 @@ gb_project_window_finalize (GObject *object)
 
   g_clear_object (&self->settings);
   g_clear_pointer (&self->selected, (GDestroyNotify)g_list_free);
+  g_clear_pointer (&self->search_text, g_free);
 
   G_OBJECT_CLASS (gb_project_window_parent_class)->finalize (object);
 }
@@ -589,6 +640,7 @@ gb_project_window_class_init (GbProjectWindowClass *klass)
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, listbox);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_bar);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_entry);
   GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, select_button);
 
   g_type_ensure (GB_TYPE_SCROLLED_WINDOW);
