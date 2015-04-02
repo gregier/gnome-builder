@@ -116,6 +116,29 @@ gb_initial_setup_dialog_show_more (GbInitialSetupDialog *self)
 }
 
 static void
+gb_initial_setup_dialog__select_list_box_header_func (GtkListBoxRow *row,
+                                                      GtkListBoxRow *before,
+                                                      gpointer       user_data)
+{
+  GbInitialSetupDialog *self = user_data;
+
+  g_assert (GB_IS_INITIAL_SETUP_DIALOG (self));
+  g_assert (GTK_IS_LIST_BOX_ROW (row));
+  g_assert (!before || GTK_IS_LIST_BOX_ROW (before));
+
+  if (before != NULL)
+    {
+      GtkWidget *header;
+
+      header = g_object_new (GTK_TYPE_SEPARATOR,
+                             "orientation", GTK_ORIENTATION_HORIZONTAL,
+                             "visible", TRUE,
+                             NULL);
+      gtk_list_box_row_set_header (row, header);
+    }
+}
+
+static void
 gb_initial_setup_dialog__select_list_box_row_activated (GbInitialSetupDialog *self,
                                                         GtkListBoxRow        *row,
                                                         GtkListBox           *list_box)
@@ -229,7 +252,10 @@ gb_initial_setup_dialog_init (GbInitialSetupDialog *self)
 {
   gtk_widget_init_template (GTK_WIDGET (self));
 
-  gb_initial_setup_dialog_set_page (self, GB_INITIAL_SETUP_PAGE_SELECT_PROJECT);
+  gtk_list_box_set_header_func (self->select_list_box,
+                                gb_initial_setup_dialog__select_list_box_header_func,
+                                self,
+                                NULL);
 
   g_signal_connect_object (self->back_button,
                            "clicked",
@@ -242,6 +268,8 @@ gb_initial_setup_dialog_init (GbInitialSetupDialog *self)
                            G_CALLBACK (gb_initial_setup_dialog__select_list_box_row_activated),
                            self,
                            G_CONNECT_SWAPPED);
+
+  gb_initial_setup_dialog_set_page (self, GB_INITIAL_SETUP_PAGE_SELECT_PROJECT);
 }
 
 GType
