@@ -614,6 +614,49 @@ gb_project_window_constructed (GObject *object)
   G_OBJECT_CLASS (gb_project_window_parent_class)->constructed (object);
 }
 
+static gboolean
+gb_project_window_key_press_event (GtkWidget   *widget,
+                                   GdkEventKey *event)
+{
+  GbProjectWindow *self = (GbProjectWindow *)widget;
+  gboolean ret;
+
+  ret = GTK_WIDGET_CLASS (gb_project_window_parent_class)->key_press_event (widget, event);
+
+  if (!ret)
+    {
+      switch (event->keyval)
+        {
+        case GDK_KEY_Escape:
+          if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (self->select_button)))
+            {
+              gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (self->select_button), FALSE);
+              ret = TRUE;
+            }
+          if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (self->search_button)))
+            {
+              gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (self->search_button), FALSE);
+              ret = TRUE;
+            }
+          break;
+
+        case GDK_KEY_f:
+          if ((event->state & GDK_CONTROL_MASK) != 0)
+            {
+              gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (self->search_button), TRUE);
+              ret = TRUE;
+            }
+          break;
+
+        default:
+          break;
+        }
+    }
+
+
+  return ret;
+}
+
 static void
 gb_project_window_finalize (GObject *object)
 {
@@ -630,9 +673,12 @@ static void
 gb_project_window_class_init (GbProjectWindowClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 
   object_class->constructed = gb_project_window_constructed;
   object_class->finalize = gb_project_window_finalize;
+
+  widget_class->key_press_event = gb_project_window_key_press_event;
 
   GB_WIDGET_CLASS_TEMPLATE (klass, "gb-project-window.ui");
 
