@@ -19,6 +19,7 @@
 #include <glib/gi18n.h>
 #include <ide.h>
 
+#include "gb-glib.h"
 #include "gb-initial-setup-dialog.h"
 #include "gb-scrolled-window.h"
 #include "gb-widget.h"
@@ -51,38 +52,6 @@ enum {
 };
 
 static GParamSpec *gParamSpecs [LAST_PROP];
-
-static gchar *
-_g_date_time_format_for_display (GDateTime *datetime)
-{
-  GDateTime *now;
-  GTimeSpan diff;
-  gint years;
-
-  g_return_val_if_fail (datetime != NULL, NULL);
-
-  now = g_date_time_new_now_utc ();
-  diff = g_date_time_difference (now, datetime) / G_USEC_PER_SEC;
-
-  if (diff < 0)
-    return g_strdup ("");
-  else if (diff < (60 * 45))
-    return g_strdup (_("Just now"));
-  else if (diff < (60 * 90))
-    return g_strdup (_("An hour ago"));
-  else if (diff < (60 * 60 * 24 * 2))
-    return g_strdup (_("Yesterday"));
-  else if (diff < (60 * 60 * 24 * 7))
-    return g_date_time_format (datetime, "%A");
-  else if (diff < (60 * 60 * 24 * 365))
-    return g_date_time_format (datetime, "%B");
-  else if (diff < (60 * 60 * 24 * 365 * 1.5))
-    return g_strdup (_("About a year ago"));
-
-  years = MAX (2, diff / (60 * 60 * 24 * 365));
-
-  return g_strdup_printf (_("About %u years ago"), years);
-}
 
 GbInitialSetupPage
 gb_initial_setup_dialog_get_page (GbInitialSetupDialog *self)
@@ -163,7 +132,7 @@ gb_initial_setup_dialog__miner_discovered_cb (GbInitialSetupDialog *self,
 
   last_modified_at = ide_project_info_get_last_modified_at (project_info);
   if (last_modified_at)
-    display_date = _g_date_time_format_for_display (last_modified_at);
+    display_date = gb_date_time_format_for_display (last_modified_at);
 
   row = g_object_new (GTK_TYPE_LIST_BOX_ROW,
                       "visible", TRUE,
