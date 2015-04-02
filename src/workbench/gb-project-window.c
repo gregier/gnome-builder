@@ -23,11 +23,12 @@
 #define G_LOG_DOMAIN "gb-project-window"
 
 #include <glib/gi18n.h>
-#include <string.h>
+#include <ide.h>
 
 #include "gb-editor-document.h"
 #include "gb-project-window.h"
 #include "gb-scrolled-window.h"
+#include "gb-string.h"
 #include "gb-widget.h"
 #include "gb-workbench.h"
 
@@ -37,7 +38,7 @@ struct _GbProjectWindow
 
   GSettings       *settings;
 
-  gchar           *search_text;
+  IdePatternSpec  *search_pattern;
   GList           *selected;
 
   GtkActionBar    *action_bar;
@@ -462,15 +463,12 @@ gb_project_window__listbox_filter (GtkListBoxRow *row,
 
   info = g_object_get_data (G_OBJECT (row), "IDE_PROJECT_INFO");
 
-  if (info == NULL || self->search_text == NULL)
+  if (info == NULL || self->search_pattern == NULL)
     return TRUE;
 
   name = ide_project_info_get_name (info);
 
-  if (strstr (name, self->search_text) == NULL)
-    return FALSE;
-
-  return TRUE;
+  return ide_pattern_spec_match (self->search_pattern, name);
 }
 
 static void
@@ -543,11 +541,17 @@ static void
 gb_project_window__search_entry_changed (GbProjectWindow *self,
                                          GtkEntry        *entry)
 {
+  const gchar *text;
+
   g_assert (GB_IS_PROJECT_WINDOW (self));
   g_assert (GTK_IS_ENTRY (entry));
 
-  g_clear_pointer (&self->search_text, g_free);
-  self->search_text = g_strdup (gtk_entry_get_text (entry));
+  g_clear_pointer (&self->search_pattern, (GDestroyNotify)ide_pattern_spec_unref);
+
+  text = gtk_entry_get_text (entry);
+
+  if (!gb_str_empty0 (text))
+    self->search_pattern = ide_pattern_spec_new (text);
 
   gtk_list_box_invalidate_filter (self->listbox);
 }
@@ -617,7 +621,7 @@ gb_project_window_finalize (GObject *object)
 
   g_clear_object (&self->settings);
   g_clear_pointer (&self->selected, (GDestroyNotify)g_list_free);
-  g_clear_pointer (&self->search_text, g_free);
+  g_clear_pointer (&self->search_pattern, (GDestroyNotify)ide_pattern_spec_unref);
 
   G_OBJECT_CLASS (gb_project_window_parent_class)->finalize (object);
 }
