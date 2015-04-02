@@ -17,6 +17,7 @@
  */
 
 #include <glib/gi18n.h>
+#include <ide.h>
 
 #include "gb-initial-setup-dialog.h"
 #include "gb-scrolled-window.h"
@@ -50,6 +51,38 @@ enum {
 };
 
 static GParamSpec *gParamSpecs [LAST_PROP];
+
+static gchar *
+_g_date_time_format_for_display (GDateTime *datetime)
+{
+  GDateTime *now;
+  GTimeSpan diff;
+  gint years;
+
+  g_return_val_if_fail (datetime != NULL, NULL);
+
+  now = g_date_time_new_now_utc ();
+  diff = g_date_time_difference (now, datetime) / G_USEC_PER_SEC;
+
+  if (diff < 0)
+    return g_strdup ("");
+  else if (diff < (60 * 45))
+    return g_strdup (_("Just now"));
+  else if (diff < (60 * 90))
+    return g_strdup (_("An hour ago"));
+  else if (diff < (60 * 60 * 24 * 2))
+    return g_strdup (_("Yesterday"));
+  else if (diff < (60 * 60 * 24 * 7))
+    return g_date_time_format (datetime, "%A");
+  else if (diff < (60 * 60 * 24 * 365))
+    return g_date_time_format (datetime, "%B");
+  else if (diff < (60 * 60 * 24 * 365 * 1.5))
+    return g_strdup (_("About a year ago"));
+
+  years = MAX (2, diff / (60 * 60 * 24 * 365));
+
+  return g_strdup_printf (_("About %u years ago"), years);
+}
 
 GbInitialSetupPage
 gb_initial_setup_dialog_get_page (GbInitialSetupDialog *self)
@@ -110,9 +143,132 @@ gb_initial_setup_dialog_set_page (GbInitialSetupDialog *self,
 }
 
 static void
+gb_initial_setup_dialog__miner_discovered_cb (GbInitialSetupDialog *self,
+                                              IdeProjectInfo       *project_info,
+                                              IdeProjectMiner      *miner)
+{
+  g_autofree gchar *display_date = NULL;
+  const gchar *project_name;
+  GDateTime *last_modified_at;
+  GtkWidget *box;
+  GtkWidget *row;
+  GtkWidget *label;
+  GtkWidget *date_label;
+
+  g_assert (GB_IS_INITIAL_SETUP_DIALOG (self));
+  g_assert (IDE_IS_PROJECT_INFO (project_info));
+  g_assert (IDE_IS_PROJECT_MINER (miner));
+
+  project_name = ide_project_info_get_name (project_info);
+
+  last_modified_at = ide_project_info_get_last_modified_at (project_info);
+  if (last_modified_at)
+    display_date = _g_date_time_format_for_display (last_modified_at);
+
+  row = g_object_new (GTK_TYPE_LIST_BOX_ROW,
+                      "visible", TRUE,
+                      NULL);
+  g_object_set_data_full (G_OBJECT (row), "IDE_PROJECT_INFO",
+                          g_object_ref (project_info), g_object_unref);
+  box = g_object_new (GTK_TYPE_BOX,
+                      "orientation", GTK_ORIENTATION_HORIZONTAL,
+                      "visible", TRUE,
+                      NULL);
+  label = g_object_new (GTK_TYPE_LABEL,
+                        "hexpand", TRUE,
+                        "label", project_name,
+                        "margin", 12,
+                        "visible", TRUE,
+                        "xalign", 0.0f,
+                        NULL);
+  date_label = g_object_new (GTK_TYPE_LABEL,
+                             "label", display_date,
+                             "margin", 12,
+                             "visible", TRUE,
+                             "xalign", 1.0f,
+                             NULL);
+  gtk_style_context_add_class (gtk_widget_get_style_context (date_label), "dim-label");
+  gtk_container_add (GTK_CONTAINER (box), label);
+  gtk_container_add (GTK_CONTAINER (box), date_label);
+  gtk_container_add (GTK_CONTAINER (row), box);
+  gtk_container_add (GTK_CONTAINER (self->select_list_box), row);
+}
+
+static void
+gb_initial_setup_dialog__miner_mine_cb (GObject      *object,
+                                        GAsyncResult *result,
+                                        gpointer      user_data)
+{
+  g_autoptr(GbInitialSetupDialog) self = user_data;
+  IdeProjectMiner *miner = (IdeProjectMiner *)object;
+  g_autoptr(GError) error = NULL;
+
+  g_assert (GB_IS_INITIAL_SETUP_DIALOG (self));
+  g_assert (IDE_IS_PROJECT_MINER (miner));
+
+  if (!ide_project_miner_mine_finish (miner, result, &error))
+    g_warning ("%s", error->message);
+}
+
+static void
 gb_initial_setup_dialog_show_more (GbInitialSetupDialog *self)
 {
+  g_autoptr(IdeProjectMiner) miner = NULL;
+
   g_assert (GB_INITIAL_SETUP_DIALOG (self));
+
+  gtk_widget_set_visible (GTK_WIDGET (self->row_view_more), FALSE);
+
+  miner = g_object_new (IDE_TYPE_AUTOTOOLS_PROJECT_MINER, NULL);
+  g_signal_connect_object (miner,
+                           "discovered",
+                           G_CALLBACK (gb_initial_setup_dialog__miner_discovered_cb),
+                           self,
+                           G_CONNECT_SWAPPED);
+  ide_project_miner_mine_async (miner,
+                                NULL,
+                                gb_initial_setup_dialog__miner_mine_cb,
+                                g_object_ref (self));
+}
+
+static gint
+gb_initial_setup_dialog__select_list_box_sort_func (GtkListBoxRow *row1,
+                                                    GtkListBoxRow *row2,
+                                                    gpointer       user_data)
+{
+  IdeProjectInfo *info1;
+  IdeProjectInfo *info2;
+  GDateTime *dt1;
+  GDateTime *dt2;
+  GTimeSpan diff;
+
+  g_assert (GTK_IS_LIST_BOX_ROW (row1));
+  g_assert (GTK_IS_LIST_BOX_ROW (row2));
+
+  info1 = g_object_get_data (G_OBJECT (row1), "IDE_PROJECT_INFO");
+  info2 = g_object_get_data (G_OBJECT (row2), "IDE_PROJECT_INFO");
+
+  if (info1 == NULL)
+    return -1;
+  else if (info2 == NULL)
+    return 1;
+
+  dt1 = ide_project_info_get_last_modified_at (info1);
+  dt2 = ide_project_info_get_last_modified_at (info2);
+
+  if (dt1 == NULL)
+    return 1;
+  else if (dt2 == NULL)
+    return -1;
+
+  diff = g_date_time_difference (dt1, dt2);
+
+  if (diff < 0)
+    return 1;
+  else if (diff > 0)
+    return -1;
+
+  return 0;
 }
 
 static void
@@ -256,6 +412,11 @@ gb_initial_setup_dialog_init (GbInitialSetupDialog *self)
                                 gb_initial_setup_dialog__select_list_box_header_func,
                                 self,
                                 NULL);
+
+  gtk_list_box_set_sort_func (self->select_list_box,
+                              gb_initial_setup_dialog__select_list_box_sort_func,
+                              self,
+                              NULL);
 
   g_signal_connect_object (self->back_button,
                            "clicked",

@@ -66,6 +66,7 @@ ide_autotools_project_miner_discovered (IdeAutotoolsProjectMiner *self,
   uri = g_file_get_uri (directory);
   g_debug ("Discovered autotools project at %s", uri);
 
+  /* TODO: better time tracking */
   mtime = g_file_info_get_attribute_uint64 (file_info, G_FILE_ATTRIBUTE_TIME_MODIFIED);
 
   /*
@@ -124,6 +125,7 @@ ide_autotools_project_miner_mine_directory (IdeAutotoolsProjectMiner *self,
   }
 #endif
 
+  /* TODO: better time tracking */
   file_enum = g_file_enumerate_children (directory,
                                          G_FILE_ATTRIBUTE_STANDARD_NAME","
                                          G_FILE_ATTRIBUTE_STANDARD_TYPE","
