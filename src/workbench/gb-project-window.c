@@ -538,6 +538,26 @@ gb_project_window__cancel_button_clicked (GbProjectWindow *self,
 }
 
 static void
+gb_project_window__search_entry_activate (GbProjectWindow *self,
+                                          GtkEntry        *entry)
+{
+  GtkListBoxRow *row;
+
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GTK_IS_ENTRY (entry));
+
+  /* FIXME: We use 1 because 0 doesn't work and we have no API to get
+   *        the first row taking the sort/filter into account.
+   */
+  row = gtk_list_box_get_row_at_y (self->listbox, 1);
+
+  if (row != NULL)
+    {
+      g_signal_emit_by_name (row, "activate");
+    }
+}
+
+static void
 gb_project_window__search_entry_changed (GbProjectWindow *self,
                                          GtkEntry        *entry)
 {
@@ -575,6 +595,12 @@ gb_project_window_constructed (GObject *object)
   g_object_bind_property (self->search_button, "active",
                           self->search_bar, "search-mode-enabled",
                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  g_signal_connect_object (self->search_entry,
+                           "activate",
+                           G_CALLBACK (gb_project_window__search_entry_activate),
+                           self,
+                           G_CONNECT_SWAPPED);
 
   g_signal_connect_object (self->search_entry,
                            "changed",
