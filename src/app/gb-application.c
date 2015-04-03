@@ -517,6 +517,7 @@ void
 gb_application_show_projects_window (GbApplication *self)
 {
   GbProjectWindow *window;
+  GtkRequisition req;
   GList *windows;
 
   g_assert (GB_IS_APPLICATION (self));
@@ -532,8 +533,12 @@ gb_application_show_projects_window (GbApplication *self)
         }
     }
 
+  get_default_size (&req);
+
   window = g_object_new (GB_TYPE_PROJECT_WINDOW,
                          "application", self,
+                         "default-width", req.width,
+                         "default-height", req.height,
                          NULL);
   gtk_window_maximize (GTK_WINDOW (window));
   gtk_window_present (GTK_WINDOW (window));
