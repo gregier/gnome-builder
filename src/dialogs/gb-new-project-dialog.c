@@ -27,10 +27,14 @@ struct _GbNewProjectDialog
 
   GtkButton            *back_button;
   GtkButton            *cancel_button;
+  GtkFileChooserWidget *clone_location_button;
   GtkButton            *create_button;
   GtkFileChooserWidget *file_chooser;
+  GtkHeaderBar         *header_bar;
   GtkListBox           *open_list_box;
+  GtkListBoxRow        *row_clone_remote;
   GtkListBoxRow        *row_open_local;
+  GtkBox               *page_clone_remote;
   GtkBox               *page_open_project;
   GtkStack             *stack;
 };
@@ -119,6 +123,8 @@ gb_new_project_dialog__open_list_box_row_activated (GbNewProjectDialog *self,
 
   if (row == self->row_open_local)
     gtk_stack_set_visible_child (self->stack, GTK_WIDGET (self->file_chooser));
+  else if (row == self->row_clone_remote)
+    gtk_stack_set_visible_child (self->stack, GTK_WIDGET (self->page_clone_remote));
 }
 
 static void
@@ -138,13 +144,22 @@ gb_new_project_dialog__stack_notify_visible_child (GbNewProjectDialog *self,
       gtk_widget_hide (GTK_WIDGET (self->cancel_button));
       gtk_widget_show (GTK_WIDGET (self->back_button));
       gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), FALSE);
+      gtk_header_bar_set_title (self->header_bar, _("Select Project File"));
     }
   else if (visible_child == GTK_WIDGET (self->page_open_project))
-  {
+    {
       gtk_widget_hide (GTK_WIDGET (self->back_button));
       gtk_widget_show (GTK_WIDGET (self->cancel_button));
       gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), FALSE);
-  }
+      gtk_header_bar_set_title (self->header_bar, _("New Project"));
+    }
+  else if (visible_child == GTK_WIDGET (self->page_clone_remote))
+    {
+      gtk_widget_hide (GTK_WIDGET (self->cancel_button));
+      gtk_widget_show (GTK_WIDGET (self->back_button));
+      gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), FALSE);
+      gtk_header_bar_set_title (self->header_bar, _("Clone Repository"));
+    }
 }
 
 static GList *
@@ -321,17 +336,23 @@ gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
 
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, back_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, cancel_button);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_location_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, create_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, file_chooser);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, header_bar);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, open_list_box);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, page_clone_remote);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, page_open_project);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, row_open_local);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, row_clone_remote);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, stack);
 }
 
 static void
 gb_new_project_dialog_init (GbNewProjectDialog *self)
 {
+  g_autofree gchar *path = NULL;
+  GFile *location;
   GList *iter;
   GList *filters;
 
@@ -387,6 +408,10 @@ gb_new_project_dialog_init (GbNewProjectDialog *self)
   gtk_list_box_set_header_func (self->open_list_box,
                                 gb_new_project_dialog__open_list_box_header_func,
                                 NULL, NULL);
+
+  path = g_build_filename (g_get_home_dir (), Q_("Directory|Projects"), NULL);
+  gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (self->file_chooser), path);
+  gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (self->clone_location_button), path);
 
   g_object_notify (G_OBJECT (self->stack), "visible-child");
 }

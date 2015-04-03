@@ -117,7 +117,7 @@
                           </object>
                         </child>
                         <child>
-                          <object class="GtkListBoxRow" id="row_open_remove_project">
+                          <object class="GtkListBoxRow" id="row_clone_remote">
                             <property name="visible">true</property>
                             <child>
                               <object class="GtkBox">
@@ -280,6 +280,71 @@
             <property name="height-request">500</property>
           </object>
         </child>
+        <child>
+          <object class="GtkBox" id="page_clone_remote">
+            <property name="orientation">horizontal</property>
+            <property name="expand">true</property>
+            <property name="spacing">12</property>
+            <property name="visible">true</property>
+            <child type="center">
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="halign">center</property>
+                <property name="hexpand">false</property>
+                <property name="valign">center</property>
+                <property name="vexpand">false</property>
+                <property name="visible">true</property>
+                <child>
+                  <object class="GtkEntry" id="clone_uri_entry">
+                    <property name="hexpand">true</property>
+                    <property name="width-chars">35</property>
+                    <property name="placeholder-text" translatable="yes">ssh://user@host:repository.git</property>
+                    <property name="visible">true</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFileChooserButton" id="clone_location_button">
+                    <property name="action">select-folder</property>
+                    <property name="hexpand">true</property>
+                    <property name="visible">true</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+                <property name="valign">center</property>
+                <property name="halign">end</property>
+                <property name="visible">true</property>
+                <child>
+                  <object class="GtkLabel" id="clone_uri_label">
+                    <property name="label" translatable="yes">Repository URL</property>
+                    <property name="visible">true</property>
+                    <property name="xalign">1.0</property>
+                    <style>
+                      <class name="dim-label"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="clone_location_label">
+                    <property name="label" translatable="yes">Location</property>
+                    <property name="visible">true</property>
+                    <property name="xalign">1.0</property>
+                    <style>
+                      <class name="dim-label"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
   </template>
@@ -296,6 +361,10 @@
       <widget name="language_label"/>
       <widget name="pattern_button"/>
       <widget name="pattern_label"/>
+      <widget name="clone_location_label"/>
+      <widget name="clone_location_button"/>
+      <widget name="clone_uri_label"/>
+      <widget name="clone_uri_entry"/>
     </widgets>
   </object>
 </interface>
