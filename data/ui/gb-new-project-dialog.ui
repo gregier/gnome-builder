@@ -350,10 +350,28 @@
                           </object>
                         </child>
                         <child>
-                          <object class="GtkFileChooserButton" id="clone_location_button">
-                            <property name="action">select-folder</property>
-                            <property name="hexpand">true</property>
+                          <object class="GtkBox">
                             <property name="visible">true</property>
+                            <style>
+                              <class name="linked"/>
+                            </style>
+                            <child>
+                              <object class="GtkFileChooserButton" id="clone_location_button">
+                                <property name="action">select-folder</property>
+                                <property name="hexpand">true</property>
+                                <property name="visible">true</property>
+                                <style>
+                                  <class name="linked-on-right"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkEntry" id="clone_location_entry">
+                                <property name="hexpand">true</property>
+                                <property name="placeholder-text" translatable="yes">Directory</property>
+                                <property name="visible">true</property>
+                              </object>
+                            </child>
                           </object>
                         </child>
                       </object>
