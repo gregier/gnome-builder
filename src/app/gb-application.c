@@ -409,9 +409,36 @@ gb_application_open_project (GbApplication *self,
   g_autoptr(GFile) directory = NULL;
   g_autoptr(GTask) task = NULL;
   g_autoptr(GPtrArray) ar = NULL;
+  GList *windows;
+  GList *iter;
 
   g_return_if_fail (GB_IS_APPLICATION (self));
   g_return_if_fail (G_IS_FILE (file));
+
+  windows = gtk_application_get_windows (GTK_APPLICATION (self));
+
+  for (iter = windows; iter; iter = iter->next)
+    {
+      if (GB_IS_WORKBENCH (iter->data))
+        {
+          IdeContext *context;
+
+          context = gb_workbench_get_context (iter->data);
+
+          if (context != NULL)
+            {
+              GFile *project_file;
+
+              project_file = ide_context_get_project_file (context);
+
+              if (g_file_equal (file, project_file))
+                {
+                  gtk_window_present (iter->data);
+                  return;
+                }
+            }
+        }
+    }
 
   task = g_task_new (self, NULL, NULL, NULL);
 
