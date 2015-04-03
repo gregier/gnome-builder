@@ -18,7 +18,6 @@
 
 #include <glib/gi18n.h>
 
-#include "gb-application.h"
 #include "gb-new-project-dialog.h"
 #include "gb-widget.h"
 
@@ -46,6 +45,7 @@ enum {
 enum {
   BACK,
   CLOSE,
+  OPEN_PROJECT,
   LAST_SIGNAL
 };
 
@@ -91,13 +91,10 @@ static void
 gb_new_project_dialog__create_button_clicked (GbNewProjectDialog *self,
                                               GtkButton          *cancel_button)
 {
-  GApplication *app;
   GtkWidget *visible_child;
 
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
   g_assert (GTK_IS_BUTTON (cancel_button));
-
-  app = g_application_get_default ();
 
   visible_child = gtk_stack_get_visible_child (self->stack);
 
@@ -106,12 +103,8 @@ gb_new_project_dialog__create_button_clicked (GbNewProjectDialog *self,
       g_autoptr(GFile) file = NULL;
 
       file = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (self->file_chooser));
-
       if (file != NULL)
-        {
-          gb_application_open_project (GB_APPLICATION (app), file, NULL);
-          gtk_window_close (GTK_WINDOW (self));
-        }
+        g_signal_emit (self, gSignals [OPEN_PROJECT], 0, file);
     }
 }
 
@@ -270,6 +263,17 @@ gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
                                 g_cclosure_marshal_VOID__VOID,
                                 G_TYPE_NONE,
                                 0);
+
+  gSignals [OPEN_PROJECT] =
+    g_signal_new ("open-project",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__OBJECT,
+                  G_TYPE_NONE,
+                  1,
+                  G_TYPE_FILE);
 
   binding_set = gtk_binding_set_by_class (klass);
 

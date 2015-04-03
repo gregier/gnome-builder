@@ -25,6 +25,7 @@
 #include <glib/gi18n.h>
 #include <ide.h>
 
+#include "gb-application.h"
 #include "gb-editor-document.h"
 #include "gb-glib.h"
 #include "gb-new-project-dialog.h"
@@ -607,6 +608,23 @@ gb_project_window__search_entry_changed (GbProjectWindow *self,
 }
 
 static void
+gb_project_window__window_open_project (GbProjectWindow    *self,
+                                        GFile              *project_file,
+                                        GbNewProjectDialog *dialog)
+{
+  GApplication *app = g_application_get_default ();
+
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (G_IS_FILE (project_file));
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (dialog));
+  g_assert (GB_IS_APPLICATION (app));
+
+  gb_application_open_project (GB_APPLICATION (app), project_file, NULL);
+  gtk_widget_destroy (GTK_WIDGET (dialog));
+  gtk_widget_destroy (GTK_WIDGET (self));
+}
+
+static void
 gb_project_window__new_button_clicked (GbProjectWindow *self,
                                        GtkButton       *new_button)
 {
@@ -622,6 +640,13 @@ gb_project_window__new_button_clicked (GbProjectWindow *self,
                          "type-hint", GDK_WINDOW_TYPE_HINT_DIALOG,
                          "visible", TRUE,
                          NULL);
+
+  g_signal_connect_object (window,
+                           "open-project",
+                           G_CALLBACK (gb_project_window__window_open_project),
+                           self,
+                           G_CONNECT_SWAPPED);
+
   gtk_window_present (window);
 }
 
