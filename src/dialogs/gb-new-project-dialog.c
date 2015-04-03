@@ -43,7 +43,29 @@ enum {
   LAST_PROP
 };
 
+enum {
+  BACK,
+  CLOSE,
+  LAST_SIGNAL
+};
+
 static GParamSpec *gParamSpecs [LAST_PROP];
+static guint gSignals [LAST_SIGNAL];
+
+static void
+gb_new_project_dialog_back (GbNewProjectDialog *self)
+{
+  GtkWidget *child;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  child = gtk_stack_get_visible_child (self->stack);
+
+  if (child == GTK_WIDGET (self->page_open_project))
+    g_signal_emit_by_name (self, "close");
+  else
+    gtk_stack_set_visible_child (self->stack, GTK_WIDGET (self->page_open_project));
+}
 
 static void
 gb_new_project_dialog__back_button_clicked (GbNewProjectDialog *self,
@@ -174,6 +196,14 @@ gb_new_project_dialog__file_chooser_selection_changed (GbNewProjectDialog *self,
 }
 
 static void
+gb_new_project_dialog_close (GbNewProjectDialog *self)
+{
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  gtk_window_close (GTK_WINDOW (self));
+}
+
+static void
 gb_new_project_dialog_finalize (GObject *object)
 {
   GbNewProjectDialog *self = (GbNewProjectDialog *)object;
@@ -215,10 +245,39 @@ static void
 gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GtkBindingSet *binding_set;
 
   object_class->finalize = gb_new_project_dialog_finalize;
   object_class->get_property = gb_new_project_dialog_get_property;
   object_class->set_property = gb_new_project_dialog_set_property;
+
+  gSignals [BACK] =
+    g_signal_new_class_handler ("back",
+                                G_TYPE_FROM_CLASS (klass),
+                                G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+                                G_CALLBACK (gb_new_project_dialog_back),
+                                NULL, NULL,
+                                g_cclosure_marshal_VOID__VOID,
+                                G_TYPE_NONE,
+                                0);
+
+  gSignals [CLOSE] =
+    g_signal_new_class_handler ("close",
+                                G_TYPE_FROM_CLASS (klass),
+                                G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+                                G_CALLBACK (gb_new_project_dialog_close),
+                                NULL, NULL,
+                                g_cclosure_marshal_VOID__VOID,
+                                G_TYPE_NONE,
+                                0);
+
+  binding_set = gtk_binding_set_by_class (klass);
+
+  gtk_binding_entry_add_signal (binding_set,
+                                GDK_KEY_Escape,
+                                0,
+                                "back",
+                                0);
 
   GB_WIDGET_CLASS_TEMPLATE (klass, "gb-new-project-dialog.ui");
 
