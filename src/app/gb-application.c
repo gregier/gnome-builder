@@ -401,6 +401,40 @@ cleanup:
   g_application_release (G_APPLICATION (self));
 }
 
+void
+gb_application_open_project (GbApplication *self,
+                             GFile         *file,
+                             GPtrArray     *additional_files)
+{
+  g_autoptr(GFile) directory = NULL;
+  g_autoptr(GTask) task = NULL;
+  g_autoptr(GPtrArray) ar = NULL;
+
+  g_return_if_fail (GB_IS_APPLICATION (self));
+  g_return_if_fail (G_IS_FILE (file));
+
+  task = g_task_new (self, NULL, NULL, NULL);
+
+  if (additional_files)
+    ar = g_ptr_array_ref (additional_files);
+  else
+    ar = g_ptr_array_new ();
+
+  g_task_set_task_data (task, g_ptr_array_ref (ar), (GDestroyNotify)g_ptr_array_unref);
+
+  if (g_file_query_file_type (file, 0, NULL) == G_FILE_TYPE_DIRECTORY)
+    directory = g_object_ref (file);
+  else
+    directory = g_file_get_parent (file);
+
+  g_application_hold (G_APPLICATION (self));
+
+  ide_context_new_async (directory,
+                         NULL,
+                         gb_application__context_new_cb,
+                         g_object_ref (task));
+}
+
 static void
 gb_application_open (GApplication   *application,
                      GFile         **files,
@@ -444,25 +478,9 @@ gb_application_open (GApplication   *application,
    */
   if (ar && ar->len)
     {
-      g_autoptr(GFile) directory = NULL;
-      g_autoptr(GTask) task = NULL;
-      GFile *file;
+      GFile *file = g_ptr_array_index (ar, 0);
 
-      task = g_task_new (self, NULL, NULL, NULL);
-      g_task_set_task_data (task, g_ptr_array_ref (ar), (GDestroyNotify)g_ptr_array_unref);
-
-      file = g_ptr_array_index (ar, 0);
-
-      if (g_file_query_file_type (file, 0, NULL) == G_FILE_TYPE_DIRECTORY)
-        directory = g_object_ref (file);
-      else
-        directory = g_file_get_parent (file);
-
-      ide_context_new_async (directory,
-                             NULL,
-                             gb_application__context_new_cb,
-                             g_object_ref (task));
-      g_application_hold (G_APPLICATION (self));
+      gb_application_open_project (self, file, ar);
     }
 
   IDE_EXIT;

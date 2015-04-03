@@ -18,12 +18,13 @@
 
 #include <glib/gi18n.h>
 
+#include "gb-application.h"
 #include "gb-new-project-dialog.h"
 #include "gb-widget.h"
 
 struct _GbNewProjectDialog
 {
-  GtkDialog  parent_instance;
+  GtkDialog             parent_instance;
 
   GtkButton            *back_button;
   GtkButton            *cancel_button;
@@ -62,6 +63,34 @@ gb_new_project_dialog__cancel_button_clicked (GbNewProjectDialog *self,
   g_assert (GTK_IS_BUTTON (cancel_button));
 
   gtk_window_close (GTK_WINDOW (self));
+}
+
+static void
+gb_new_project_dialog__create_button_clicked (GbNewProjectDialog *self,
+                                              GtkButton          *cancel_button)
+{
+  GApplication *app;
+  GtkWidget *visible_child;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+  g_assert (GTK_IS_BUTTON (cancel_button));
+
+  app = g_application_get_default ();
+
+  visible_child = gtk_stack_get_visible_child (self->stack);
+
+  if (visible_child == GTK_WIDGET (self->file_chooser))
+    {
+      g_autoptr(GFile) file = NULL;
+
+      file = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (self->file_chooser));
+
+      if (file != NULL)
+        {
+          gb_application_open_project (GB_APPLICATION (app), file, NULL);
+          gtk_window_close (GTK_WINDOW (self));
+        }
+    }
 }
 
 static void
@@ -115,12 +144,13 @@ gb_new_project_dialog_create_filters (GbNewProjectDialog *self)
 
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
 
-  /* autotools filter */
+  /* autotools filter (IdeAutotoolsBuildSystem) */
   filter = gtk_file_filter_new ();
   gtk_file_filter_set_name (filter, _("Autotools Project (configure.ac)"));
   gtk_file_filter_add_pattern (filter, "configure.ac");
   list = g_list_append (list, filter);
 
+  /* any directory filter (IdeDirectoryBuildSystem) */
   filter = gtk_file_filter_new ();
   gtk_file_filter_set_name (filter, _("Any Directory"));
   gtk_file_filter_add_pattern (filter, "*");
@@ -230,6 +260,12 @@ gb_new_project_dialog_init (GbNewProjectDialog *self)
   g_signal_connect_object (self->cancel_button,
                            "clicked",
                            G_CALLBACK (gb_new_project_dialog__cancel_button_clicked),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (self->create_button,
+                           "clicked",
+                           G_CALLBACK (gb_new_project_dialog__create_button_clicked),
                            self,
                            G_CONNECT_SWAPPED);
 
