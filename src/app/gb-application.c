@@ -398,6 +398,7 @@ gb_application__context_new_cb (GObject      *object,
 
 cleanup:
   g_task_return_boolean (task, FALSE);
+  g_application_unmark_busy (G_APPLICATION (self));
   g_application_release (G_APPLICATION (self));
 }
 
@@ -454,6 +455,7 @@ gb_application_open_project (GbApplication *self,
   else
     directory = g_file_get_parent (file);
 
+  g_application_mark_busy (G_APPLICATION (self));
   g_application_hold (G_APPLICATION (self));
 
   ide_context_new_async (directory,
