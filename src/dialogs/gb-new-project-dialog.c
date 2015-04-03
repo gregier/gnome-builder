@@ -110,7 +110,8 @@ gb_new_project_dialog_back (GbNewProjectDialog *self)
 
   if (child == GTK_WIDGET (self->page_open_project))
     g_signal_emit_by_name (self, "close");
-  else
+
+  if (gtk_widget_get_sensitive (GTK_WIDGET (self->back_button)))
     gtk_stack_set_visible_child (self->stack, GTK_WIDGET (self->page_open_project));
 }
 
@@ -125,6 +126,8 @@ gb_new_project_dialog__clone_cb (GObject      *object,
   g_autoptr(GError) error = NULL;
 
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  gtk_widget_set_sensitive (GTK_WIDGET (self->back_button), TRUE);
 
   file = g_task_propagate_pointer (task, &error);
 
@@ -226,6 +229,9 @@ gb_new_project_dialog_begin_clone (GbNewProjectDialog *self)
   const gchar *uri;
 
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  gtk_widget_set_sensitive (GTK_WIDGET (self->back_button), FALSE);
+  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), FALSE);
 
   uri = gtk_entry_get_text (self->clone_uri_entry);
   location = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (self->clone_location_button));
