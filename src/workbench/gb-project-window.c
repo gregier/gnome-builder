@@ -27,6 +27,7 @@
 
 #include "gb-editor-document.h"
 #include "gb-glib.h"
+#include "gb-new-project-dialog.h"
 #include "gb-project-window.h"
 #include "gb-scrolled-window.h"
 #include "gb-string.h"
@@ -606,6 +607,25 @@ gb_project_window__search_entry_changed (GbProjectWindow *self,
 }
 
 static void
+gb_project_window__new_button_clicked (GbProjectWindow *self,
+                                       GtkButton       *new_button)
+{
+  GtkWindow *window;
+
+  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GTK_IS_BUTTON (new_button));
+
+  window = g_object_new (GB_TYPE_NEW_PROJECT_DIALOG,
+                         "destroy-with-parent", TRUE,
+                         "modal", TRUE,
+                         "transient-for", self,
+                         "type-hint", GDK_WINDOW_TYPE_HINT_DIALOG,
+                         "visible", TRUE,
+                         NULL);
+  gtk_window_present (window);
+}
+
+static void
 gb_project_window_constructed (GObject *object)
 {
   GbProjectWindow *self = (GbProjectWindow *)object;
@@ -646,6 +666,12 @@ gb_project_window_constructed (GObject *object)
   g_signal_connect_object (self->cancel_button,
                            "clicked",
                            G_CALLBACK (gb_project_window__cancel_button_clicked),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (self->new_button,
+                           "clicked",
+                           G_CALLBACK (gb_project_window__new_button_clicked),
                            self,
                            G_CONNECT_SWAPPED);
 
