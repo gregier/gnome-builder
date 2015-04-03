@@ -103,6 +103,32 @@ gb_new_project_dialog__stack_notify_visible_child (GbNewProjectDialog *self,
   }
 }
 
+static GList *
+gb_new_project_dialog_create_filters (GbNewProjectDialog *self)
+{
+  GtkFileFilter *filter;
+  GList *list = NULL;
+
+  /*
+   * TODO: These should come from extension points in libide.
+   */
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  /* autotools filter */
+  filter = gtk_file_filter_new ();
+  gtk_file_filter_set_name (filter, _("Autotools based Project (configure.ac)"));
+  gtk_file_filter_add_pattern (filter, "configure.ac");
+  list = g_list_append (list, filter);
+
+  filter = gtk_file_filter_new ();
+  gtk_file_filter_set_name (filter, _("Directory based Project"));
+  gtk_file_filter_add_pattern (filter, "*");
+  list = g_list_append (list, filter);
+
+  return list;
+}
+
 static void
 gb_new_project_dialog_finalize (GObject *object)
 {
@@ -165,7 +191,15 @@ gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
 static void
 gb_new_project_dialog_init (GbNewProjectDialog *self)
 {
+  GList *iter;
+  GList *filters;
+
   gtk_widget_init_template (GTK_WIDGET (self));
+
+  filters = gb_new_project_dialog_create_filters (self);
+  for (iter = filters; iter; iter = iter->next)
+    gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (self->file_chooser), iter->data);
+  g_list_free (filters);
 
   g_signal_connect_object (self->stack,
                            "notify::visible-child",
