@@ -211,6 +211,26 @@ gb_new_project_dialog_close (GbNewProjectDialog *self)
 }
 
 static void
+gb_new_project_dialog__open_list_box_header_func (GtkListBoxRow *row,
+                                                  GtkListBoxRow *before,
+                                                  gpointer       user_data)
+{
+  g_assert (GTK_IS_LIST_BOX_ROW (row));
+  g_assert (!before || GTK_IS_LIST_BOX_ROW (before));
+
+  if (before != NULL)
+    {
+      GtkWidget *header;
+
+      header = g_object_new (GTK_TYPE_SEPARATOR,
+                             "orientation", GTK_ORIENTATION_HORIZONTAL,
+                             "visible", TRUE,
+                             NULL);
+      gtk_list_box_row_set_header (row, header);
+    }
+}
+
+static void
 gb_new_project_dialog_finalize (GObject *object)
 {
   GbNewProjectDialog *self = (GbNewProjectDialog *)object;
@@ -363,6 +383,10 @@ gb_new_project_dialog_init (GbNewProjectDialog *self)
                            G_CALLBACK (gb_new_project_dialog__file_chooser_file_activated),
                            self,
                            G_CONNECT_SWAPPED);
+
+  gtk_list_box_set_header_func (self->open_list_box,
+                                gb_new_project_dialog__open_list_box_header_func,
+                                NULL, NULL);
 
   g_object_notify (G_OBJECT (self->stack), "visible-child");
 }
