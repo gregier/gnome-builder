@@ -26,6 +26,7 @@
 #include <ide.h>
 
 #include "gb-editor-document.h"
+#include "gb-glib.h"
 #include "gb-project-window.h"
 #include "gb-scrolled-window.h"
 #include "gb-string.h"
@@ -247,7 +248,9 @@ create_row (GbProjectWindow *self,
             IdeProjectInfo  *project_info)
 {
   g_autofree gchar *relative_path = NULL;
+  g_autofree gchar *date_str = NULL;
   const gchar *name;
+  GDateTime *last_modified_at;
   GtkListBoxRow *row;
   GtkBox *box;
   GtkBox *vbox;
@@ -256,6 +259,7 @@ create_row (GbProjectWindow *self,
   GtkLabel *label;
   GtkLabel *label2;
   GtkCheckButton *check;
+  GtkLabel *date_label;
   GtkRevealer *revealer;
   GFile *directory;
   const gchar *icon_name = "folder";
@@ -266,6 +270,10 @@ create_row (GbProjectWindow *self,
 
   name = ide_project_info_get_name (project_info);
   directory = ide_project_info_get_directory (project_info);
+
+  last_modified_at = ide_project_info_get_last_modified_at (project_info);
+  if (last_modified_at != NULL)
+    date_str = gb_date_time_format_for_display (last_modified_at);
 
   home = g_file_new_for_path (g_get_home_dir ());
   relative_path = g_file_get_relative_path (home, directory);
@@ -340,6 +348,15 @@ create_row (GbProjectWindow *self,
                           revealer, "reveal-child",
                           G_BINDING_SYNC_CREATE);
 
+  date_label = g_object_new (GTK_TYPE_LABEL,
+                             "label", date_str,
+                             "margin", 12,
+                             "valign", GTK_ALIGN_CENTER,
+                             "visible", TRUE,
+                             "xalign", 1.0f,
+                             NULL);
+  gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (date_label)), "dim-label");
+
   G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   arrow = g_object_new (GTK_TYPE_ARROW,
                         "arrow-type", GTK_ARROW_RIGHT,
@@ -353,6 +370,7 @@ create_row (GbProjectWindow *self,
   gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (vbox));
   gtk_container_add (GTK_CONTAINER (vbox), GTK_WIDGET (label));
   gtk_container_add (GTK_CONTAINER (vbox), GTK_WIDGET (label2));
+  gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (date_label));
   gtk_container_add (GTK_CONTAINER (box), GTK_WIDGET (arrow));
   gtk_container_add (GTK_CONTAINER (row), GTK_WIDGET (box));
 
@@ -423,6 +441,9 @@ gb_project_window__listbox_sort (GtkListBoxRow *row1,
   IdeProjectInfo *info2;
   const gchar *name1;
   const gchar *name2;
+  GDateTime *dt1;
+  GDateTime *dt2;
+  gint ret;
 
   g_assert (GTK_IS_LIST_BOX_ROW (row1));
   g_assert (GTK_IS_LIST_BOX_ROW (row2));
@@ -438,6 +459,14 @@ gb_project_window__listbox_sort (GtkListBoxRow *row1,
 
   if (!info2)
     return -1;
+
+  dt1 = ide_project_info_get_last_modified_at (info1);
+  dt2 = ide_project_info_get_last_modified_at (info2);
+
+  ret = g_date_time_compare (dt2, dt1);
+
+  if (ret != 0)
+    return ret;
 
   name1 = ide_project_info_get_name (info1);
   name2 = ide_project_info_get_name (info2);
