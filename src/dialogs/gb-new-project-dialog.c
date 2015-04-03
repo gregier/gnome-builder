@@ -115,16 +115,16 @@ gb_new_project_dialog_back (GbNewProjectDialog *self)
     gtk_stack_set_visible_child (self->stack, GTK_WIDGET (self->page_open_project));
 }
 
-static void
-gb_new_project_dialog__clone_cb (GObject      *object,
-                                 GAsyncResult *result,
-                                 gpointer      user_data)
+static gboolean
+open_after_timeout (gpointer user_data)
 {
-  GbNewProjectDialog *self = (GbNewProjectDialog *)object;
+  GbNewProjectDialog *self;
+  g_autoptr(GTask) task = user_data;
   g_autoptr(GFile) file = NULL;
-  GTask *task = (GTask *)result;
   g_autoptr(GError) error = NULL;
 
+  g_assert (G_IS_TASK (task));
+  self = g_task_get_source_object (task);
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
 
   gtk_widget_set_sensitive (GTK_WIDGET (self->back_button), TRUE);
@@ -135,6 +135,35 @@ gb_new_project_dialog__clone_cb (GObject      *object,
     g_warning ("%s", error->message);
   else
     g_signal_emit (self, gSignals [OPEN_PROJECT], 0, file);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+gb_new_project_dialog__clone_cb (GObject      *object,
+                                 GAsyncResult *result,
+                                 gpointer      user_data)
+{
+  GbNewProjectDialog *self = (GbNewProjectDialog *)object;
+  GTask *task = (GTask *)result;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+  g_assert (G_IS_TASK (task));
+
+  ide_object_animate_full (self->clone_progress,
+                           IDE_ANIMATION_EASE_IN_OUT_QUAD,
+                           ANIMATION_DURATION_MSEC,
+                           NULL,
+                           (GDestroyNotify)gb_widget_fade_hide,
+                           self->clone_progress,
+                           "fraction", 1.0,
+                           NULL);
+
+  /*
+   * Wait for a second so animations can complete before opening
+   * the project. Otherwise, it's pretty jarring to the user.
+   */
+  g_timeout_add_seconds (1, open_after_timeout, g_object_ref (task));
 }
 
 static gboolean
