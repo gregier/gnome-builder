@@ -59,21 +59,6 @@ struct _GbProjectWindow
 G_DEFINE_TYPE (GbProjectWindow, gb_project_window, GTK_TYPE_APPLICATION_WINDOW)
 
 static void
-get_default_size (GtkRequisition *req)
-{
-  GdkScreen *screen;
-  GdkRectangle rect;
-  gint primary;
-
-  screen = gdk_screen_get_default ();
-  primary = gdk_screen_get_primary_monitor (screen);
- gdk_screen_get_monitor_geometry (screen, primary, &rect);
-
-  req->width = rect.width * 0.75;
-  req->height = rect.height * 0.75;
-}
-
-static void
 gb_project_window__check_toggled (GbProjectWindow *self,
                                   GtkCheckButton  *check_button)
 {
@@ -100,70 +85,13 @@ gb_project_window__check_toggled (GbProjectWindow *self,
   gtk_widget_set_sensitive (GTK_WIDGET (self->delete_button), !!self->selected);
 }
 
-static IdeBuffer *
-gb_project_window__buffer_manager_create_buffer_cb (IdeBufferManager *buffer_manager,
-                                                    IdeFile          *file,
-                                                    IdeContext       *context)
-{
-  return g_object_new (GB_TYPE_EDITOR_DOCUMENT,
-                       "context", context,
-                       "file", file,
-                       "highlight-diagnostics", TRUE,
-                       NULL);
-}
-
-static void
-gb_project_window__context_new_cb (GObject      *object,
-                                   GAsyncResult *result,
-                                   gpointer      user_data)
-{
-  g_autoptr(GbProjectWindow) self = user_data;
-  g_autoptr(IdeContext) context = NULL;
-  GbWorkbench *workbench;
-  IdeBufferManager *bufmgr;
-  GtkRequisition req;
-  GError *error = NULL;
-
-  g_assert (GB_IS_PROJECT_WINDOW (self));
-
-  context = ide_context_new_finish (result, &error);
-
-  if (context == NULL)
-    {
-      /* TODO: error dialog */
-      g_warning ("%s", error->message);
-      g_clear_error (&error);
-      return;
-    }
-
-  bufmgr = ide_context_get_buffer_manager (context);
-  g_signal_connect (bufmgr,
-                    "create-buffer",
-                    G_CALLBACK (gb_project_window__buffer_manager_create_buffer_cb),
-                    context);
-
-  get_default_size (&req);
-
-  workbench = g_object_new (GB_TYPE_WORKBENCH,
-                            "application", g_application_get_default (),
-                            "context", context,
-                            "default-width", req.width,
-                            "default-height", req.height,
-                            "title", _("Builder"),
-                            NULL);
-  gtk_window_maximize (GTK_WINDOW (workbench));
-  gtk_window_present (GTK_WINDOW (workbench));
-
-  gtk_window_close (GTK_WINDOW (self));
-}
-
 static void
 gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
                                              GtkListBoxRow   *row,
                                              GtkListBox      *listbox)
 {
   IdeProjectInfo *project_info;
-  GFile *directory;
+  GApplication *app;
   GFile *file;
 
   g_assert (GB_IS_PROJECT_WINDOW (self));
@@ -200,16 +128,12 @@ gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
       return;
     }
 
-  directory = ide_project_info_get_directory (project_info);
+  app = g_application_get_default ();
   file = ide_project_info_get_file (project_info);
 
-  if (file != NULL)
-    directory = file;
+  gb_application_open_project (GB_APPLICATION (app), file, NULL);
 
-  ide_context_new_async (directory,
-                         NULL,
-                         gb_project_window__context_new_cb,
-                         g_object_ref (self));
+  gtk_widget_destroy (GTK_WIDGET (self));
 }
 
 static gboolean
