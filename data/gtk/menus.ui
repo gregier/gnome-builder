@@ -3,7 +3,11 @@
   <!-- interface-requires gtk+ 3.0 -->
   <menu id="app-menu">
     <section>
-      <attribute name="id">open-section</attribute>
+      <attribute name="id">project-section</attribute>
+      <item>
+        <attribute name="label" translatable="yes">_New Project</attribute>
+        <attribute name="action">app.new-project</attribute>
+      </item>
       <item>
         <attribute name="label" translatable="yes">_Open Project</attribute>
         <attribute name="action">app.open-project</attribute>

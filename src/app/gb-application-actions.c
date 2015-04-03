@@ -27,6 +27,8 @@
 #include "gb-application-actions.h"
 #include "gb-application-credits.h"
 #include "gb-application-private.h"
+#include "gb-new-project-dialog.h"
+#include "gb-project-window.h"
 #include "gb-support.h"
 #include "gb-workbench.h"
 
@@ -182,8 +184,8 @@ gb_application_actions_about (GSimpleAction *action,
 
 static void
 gb_application_actions_open_project (GSimpleAction *action,
-                                     GVariant *variant,
-                                     gpointer user_data)
+                                     GVariant      *variant,
+                                     gpointer       user_data)
 {
   GbApplication *self = user_data;
 
@@ -192,9 +194,61 @@ gb_application_actions_open_project (GSimpleAction *action,
   gb_application_show_projects_window (self);
 }
 
+static void
+gb_application_actions__window_open_project (GbApplication      *self,
+                                             GFile              *project_file,
+                                             GbNewProjectDialog *window)
+{
+  g_assert (GB_IS_APPLICATION (self));
+  g_assert (G_IS_FILE (project_file));
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (window));
+
+  gb_application_open_project (self, project_file, NULL);
+  gtk_widget_destroy (GTK_WIDGET (window));
+}
+
+static void
+gb_application_actions_new_project (GSimpleAction *action,
+                                    GVariant      *variant,
+                                    gpointer       user_data)
+{
+  GbApplication *self = user_data;
+  GtkWindow *window;
+  GList *windows;
+  GList *iter;
+
+  g_assert (GB_IS_APPLICATION (self));
+
+  windows = gtk_application_get_windows (GTK_APPLICATION (self));
+
+  for (iter = windows; iter; iter = iter->next)
+    {
+      if (GB_IS_PROJECT_WINDOW (iter->data))
+        {
+          gtk_window_present (GTK_WINDOW (iter->data));
+          return;
+        }
+    }
+
+  window = g_object_new (GB_TYPE_NEW_PROJECT_DIALOG,
+                         "modal", TRUE,
+                         "transient-for", windows ? windows->data : NULL,
+                         "type-hint", GDK_WINDOW_TYPE_HINT_DIALOG,
+                         NULL);
+
+  g_signal_connect_object (window,
+                           "open-project",
+                           G_CALLBACK (gb_application_actions__window_open_project),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  gtk_window_present (window);
+}
+
 static const GActionEntry GbApplicationActions[] = {
   { "about",        gb_application_actions_about },
   { "open-project", gb_application_actions_open_project },
+  { "new-project",  gb_application_actions_new_project },
   { "preferences",  gb_application_actions_preferences },
   { "quit",         gb_application_actions_quit },
   { "support",      gb_application_actions_support },
