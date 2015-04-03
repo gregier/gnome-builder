@@ -17,17 +17,25 @@
  */
 
 #include <glib/gi18n.h>
+#include <libgit2-glib/ggit.h>
 
 #include "gb-new-project-dialog.h"
+#include "gb-string.h"
 #include "gb-widget.h"
+
+#define ANIMATION_DURATION_MSEC 250
 
 struct _GbNewProjectDialog
 {
   GtkDialog             parent_instance;
 
+  gdouble               progress_fraction;
+
   GtkButton            *back_button;
   GtkButton            *cancel_button;
   GtkFileChooserWidget *clone_location_button;
+  GtkProgressBar       *clone_progress;
+  GtkEntry             *clone_uri_entry;
   GtkButton            *create_button;
   GtkFileChooserWidget *file_chooser;
   GtkHeaderBar         *header_bar;
@@ -38,6 +46,12 @@ struct _GbNewProjectDialog
   GtkBox               *page_open_project;
   GtkStack             *stack;
 };
+
+typedef struct
+{
+  gchar *uri;
+  GFile *location;
+} CloneRequest;
 
 G_DEFINE_TYPE (GbNewProjectDialog, gb_new_project_dialog, GTK_TYPE_WINDOW)
 
@@ -57,6 +71,35 @@ static GParamSpec *gParamSpecs [LAST_PROP];
 static guint gSignals [LAST_SIGNAL];
 
 static void
+clone_request_free (gpointer data)
+{
+  CloneRequest *req = data;
+
+  if (req)
+    {
+      g_free (req->uri);
+      g_clear_object (&req->location);
+      g_free (req);
+    }
+}
+
+static CloneRequest *
+clone_request_new (const gchar *uri,
+                   GFile       *location)
+{
+  CloneRequest *req;
+
+  g_assert (uri);
+  g_assert (location);
+
+  req = g_new0 (CloneRequest, 1);
+  req->uri = g_strdup (uri);
+  req->location = g_object_ref (location);
+
+  return req;
+}
+
+static void
 gb_new_project_dialog_back (GbNewProjectDialog *self)
 {
   GtkWidget *child;
@@ -69,6 +112,127 @@ gb_new_project_dialog_back (GbNewProjectDialog *self)
     g_signal_emit_by_name (self, "close");
   else
     gtk_stack_set_visible_child (self->stack, GTK_WIDGET (self->page_open_project));
+}
+
+static void
+gb_new_project_dialog__clone_cb (GObject      *object,
+                                 GAsyncResult *result,
+                                 gpointer      user_data)
+{
+  GbNewProjectDialog *self = (GbNewProjectDialog *)object;
+  g_autoptr(GFile) file = NULL;
+  GTask *task = (GTask *)result;
+  g_autoptr(GError) error = NULL;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  file = g_task_propagate_pointer (task, &error);
+
+  if (file == NULL)
+    g_warning ("%s", error->message);
+  else
+    g_signal_emit (self, gSignals [OPEN_PROJECT], 0, file);
+}
+
+static gboolean
+update_progress_cb (gpointer data)
+{
+  g_autoptr(GbNewProjectDialog) self = data;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  ide_object_animate (self->clone_progress,
+                      IDE_ANIMATION_EASE_IN_OUT_QUAD,
+                      ANIMATION_DURATION_MSEC,
+                      NULL,
+                      "fraction", self->progress_fraction,
+                      NULL);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+transfer_progress_cb (GgitRemoteCallbacks  *callbacks,
+                      GgitTransferProgress *stats,
+                      gpointer              user_data)
+{
+  GbNewProjectDialog *self = user_data;
+  guint total;
+  guint received;
+
+  g_assert (GGIT_IS_REMOTE_CALLBACKS (callbacks));
+  g_assert (stats != NULL);
+
+  total = ggit_transfer_progress_get_total_objects (stats);
+  received = ggit_transfer_progress_get_received_objects (stats);
+  if (total == 0)
+    return;
+
+  self->progress_fraction = (gdouble)received / (gdouble)total;
+
+  g_timeout_add (0, update_progress_cb, g_object_ref (self));
+}
+
+static void
+gb_new_project_dialog__clone_worker (GTask        *task,
+                                     gpointer      source_object,
+                                     gpointer      task_data,
+                                     GCancellable *cancellable)
+{
+  GbNewProjectDialog *self = source_object;
+  GgitRepository *repository;
+  g_autoptr(GFile) workdir = NULL;
+  CloneRequest *req = task_data;
+  GgitCloneOptions *clone_options;
+  GgitRemoteCallbacks *callbacks;
+  GError *error = NULL;
+
+  g_assert (G_IS_TASK (task));
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (source_object));
+  g_assert (req != NULL);
+  g_assert (!cancellable || G_IS_CANCELLABLE (cancellable));
+
+  clone_options = ggit_clone_options_new ();
+
+  ggit_clone_options_set_is_bare (clone_options, FALSE);
+  ggit_clone_options_set_checkout_branch (clone_options, "master");
+
+  callbacks = g_object_new (GGIT_TYPE_REMOTE_CALLBACKS, NULL);
+  g_signal_connect (callbacks, "transfer-progress", G_CALLBACK (transfer_progress_cb), self);
+  ggit_clone_options_set_remote_callbacks (clone_options, callbacks);
+
+  repository = ggit_repository_clone (req->uri, req->location, clone_options, &error);
+
+  g_object_unref (callbacks);
+
+  if (repository == NULL)
+    {
+      g_task_return_error (task, error);
+      return;
+    }
+
+  workdir = ggit_repository_get_workdir (repository);
+  g_task_return_pointer (task, g_object_ref (workdir), g_object_unref);
+
+  g_object_unref (repository);
+}
+
+static void
+gb_new_project_dialog_begin_clone (GbNewProjectDialog *self)
+{
+  g_autoptr(GTask) task = NULL;
+  g_autoptr(GFile) location = NULL;
+  CloneRequest *req;
+  const gchar *uri;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  uri = gtk_entry_get_text (self->clone_uri_entry);
+  location = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (self->clone_location_button));
+  req = clone_request_new (uri, location);
+  task = g_task_new (self, NULL, gb_new_project_dialog__clone_cb, self);
+  g_task_set_task_data (task, req, clone_request_free);
+  g_task_run_in_thread (task, gb_new_project_dialog__clone_worker);
 }
 
 static void
@@ -109,6 +273,10 @@ gb_new_project_dialog__create_button_clicked (GbNewProjectDialog *self,
       file = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (self->file_chooser));
       if (file != NULL)
         g_signal_emit (self, gSignals [OPEN_PROJECT], 0, file);
+    }
+  else if (visible_child == GTK_WIDGET (self->page_clone_remote))
+    {
+      gb_new_project_dialog_begin_clone (self);
     }
 }
 
@@ -246,6 +414,22 @@ gb_new_project_dialog__open_list_box_header_func (GtkListBoxRow *row,
 }
 
 static void
+gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
+                                                GtkEntry           *entry)
+{
+  const gchar *text;
+  gboolean sensitive;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+  g_assert (GTK_IS_ENTRY (entry));
+
+  text = gtk_entry_get_text (entry);
+  sensitive = !gb_str_empty0 (text);
+
+  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), sensitive);
+}
+
+static void
 gb_new_project_dialog_finalize (GObject *object)
 {
   GbNewProjectDialog *self = (GbNewProjectDialog *)object;
@@ -337,6 +521,8 @@ gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, back_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, cancel_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_location_button);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_progress);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_uri_entry);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, create_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, file_chooser);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, header_bar);
@@ -352,7 +538,6 @@ static void
 gb_new_project_dialog_init (GbNewProjectDialog *self)
 {
   g_autofree gchar *path = NULL;
-  GFile *location;
   GList *iter;
   GList *filters;
 
@@ -378,6 +563,12 @@ gb_new_project_dialog_init (GbNewProjectDialog *self)
   g_signal_connect_object (self->cancel_button,
                            "clicked",
                            G_CALLBACK (gb_new_project_dialog__cancel_button_clicked),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (self->clone_uri_entry,
+                           "changed",
+                           G_CALLBACK (gb_new_project_dialog__clone_uri_entry_changed),
                            self,
                            G_CONNECT_SWAPPED);
 
