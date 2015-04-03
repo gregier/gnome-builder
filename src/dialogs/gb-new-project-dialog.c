@@ -189,6 +189,20 @@ gb_new_project_dialog__file_chooser_selection_changed (GbNewProjectDialog *self,
 }
 
 static void
+gb_new_project_dialog__file_chooser_file_activated (GbNewProjectDialog *self,
+                                                    GtkFileChooser     *file_chooser)
+{
+  g_autoptr(GFile) file = NULL;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+  g_assert (GTK_IS_FILE_CHOOSER (file_chooser));
+
+  file = gtk_file_chooser_get_file (file_chooser);
+  if (file != NULL)
+    g_signal_emit (self, gSignals [OPEN_PROJECT], 0, file);
+}
+
+static void
 gb_new_project_dialog_close (GbNewProjectDialog *self)
 {
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
@@ -341,6 +355,12 @@ gb_new_project_dialog_init (GbNewProjectDialog *self)
   g_signal_connect_object (self->file_chooser,
                            "selection-changed",
                            G_CALLBACK (gb_new_project_dialog__file_chooser_selection_changed),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (self->file_chooser,
+                           "file-activated",
+                           G_CALLBACK (gb_new_project_dialog__file_chooser_file_activated),
                            self,
                            G_CONNECT_SWAPPED);
 
