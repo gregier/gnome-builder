@@ -117,16 +117,30 @@ gb_new_project_dialog_create_filters (GbNewProjectDialog *self)
 
   /* autotools filter */
   filter = gtk_file_filter_new ();
-  gtk_file_filter_set_name (filter, _("Autotools based Project (configure.ac)"));
+  gtk_file_filter_set_name (filter, _("Autotools Project (configure.ac)"));
   gtk_file_filter_add_pattern (filter, "configure.ac");
   list = g_list_append (list, filter);
 
   filter = gtk_file_filter_new ();
-  gtk_file_filter_set_name (filter, _("Directory based Project"));
+  gtk_file_filter_set_name (filter, _("Any Directory"));
   gtk_file_filter_add_pattern (filter, "*");
   list = g_list_append (list, filter);
 
   return list;
+}
+
+static void
+gb_new_project_dialog__file_chooser_selection_changed (GbNewProjectDialog *self,
+                                                       GtkFileChooser     *file_chooser)
+{
+  g_autoptr(GFile) file = NULL;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+  g_assert (GTK_IS_FILE_CHOOSER (file_chooser));
+
+  file = gtk_file_chooser_get_file (file_chooser);
+
+  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), !!file);
 }
 
 static void
@@ -222,6 +236,12 @@ gb_new_project_dialog_init (GbNewProjectDialog *self)
   g_signal_connect_object (self->open_list_box,
                            "row-activated",
                            G_CALLBACK (gb_new_project_dialog__open_list_box_row_activated),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (self->file_chooser,
+                           "selection-changed",
+                           G_CALLBACK (gb_new_project_dialog__file_chooser_selection_changed),
                            self,
                            G_CONNECT_SWAPPED);
 
