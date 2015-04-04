@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define G_LOG_DOMAIN "gb-new-project-dialog"
+
 #include <glib/gi18n.h>
 #include <libgit2-glib/ggit.h>
 
