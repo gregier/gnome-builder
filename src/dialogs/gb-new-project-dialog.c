@@ -33,9 +33,11 @@ struct _GbNewProjectDialog
 
   GtkButton            *back_button;
   GtkButton            *cancel_button;
+  GtkLabel             *clone_error_label;
   GtkFileChooserWidget *clone_location_button;
   GtkEntry             *clone_location_entry;
   GtkProgressBar       *clone_progress;
+  GtkSpinner           *clone_spinner;
   GtkEntry             *clone_uri_entry;
   GtkButton            *create_button;
   GtkFileChooserWidget *file_chooser;
@@ -68,7 +70,6 @@ enum {
   LAST_SIGNAL
 };
 
-static GParamSpec *gParamSpecs [LAST_PROP];
 static guint gSignals [LAST_SIGNAL];
 
 static void
@@ -129,13 +130,20 @@ open_after_timeout (gpointer user_data)
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
 
   gtk_widget_set_sensitive (GTK_WIDGET (self->back_button), TRUE);
+  gtk_widget_hide (GTK_WIDGET (self->clone_spinner));
 
   file = g_task_propagate_pointer (task, &error);
 
-  if (file == NULL)
-    g_warning ("%s", error->message);
+  if (error)
+    {
+      g_warning ("%s", error->message);
+      gtk_label_set_label (self->clone_error_label, error->message);
+      gtk_widget_show (GTK_WIDGET (self->clone_error_label));
+    }
   else
-    g_signal_emit (self, gSignals [OPEN_PROJECT], 0, file);
+    {
+      g_signal_emit (self, gSignals [OPEN_PROJECT], 0, file);
+    }
 
   return G_SOURCE_REMOVE;
 }
@@ -264,6 +272,8 @@ gb_new_project_dialog_begin_clone (GbNewProjectDialog *self)
 
   gtk_widget_set_sensitive (GTK_WIDGET (self->back_button), FALSE);
   gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), FALSE);
+  gtk_widget_hide (GTK_WIDGET (self->clone_error_label));
+  gtk_widget_show (GTK_WIDGET (self->clone_spinner));
 
   uri = gtk_entry_get_text (self->clone_uri_entry);
   child_name = gtk_entry_get_text (self->clone_location_entry);
@@ -475,6 +485,29 @@ gb_new_project_dialog__open_list_box_header_func (GtkListBoxRow *row,
 }
 
 static void
+clone_adjust_sensitivity (GbNewProjectDialog *self)
+{
+  const gchar *uristr;
+  gboolean is_valid;
+
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+
+  uristr = gtk_entry_get_text (self->clone_uri_entry);
+  is_valid = ide_vcs_uri_is_valid (uristr);
+  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), is_valid);
+}
+
+static void
+gb_new_project_dialog__clone_location_entry_changed (GbNewProjectDialog *self,
+                                                     GtkEntry           *entry)
+{
+  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
+  g_assert (GTK_IS_ENTRY (entry));
+
+  clone_adjust_sensitivity (self);
+}
+
+static void
 gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
                                                 GtkEntry           *entry)
 {
@@ -484,10 +517,10 @@ gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
   g_assert (GTK_IS_ENTRY (entry));
 
+  clone_adjust_sensitivity (self);
+
   text = gtk_entry_get_text (entry);
   uri = ide_vcs_uri_new (text);
-
-  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), !!uri);
 
   if (uri != NULL)
     {
@@ -519,52 +552,9 @@ gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
 }
 
 static void
-gb_new_project_dialog_finalize (GObject *object)
-{
-  GbNewProjectDialog *self = (GbNewProjectDialog *)object;
-
-  G_OBJECT_CLASS (gb_new_project_dialog_parent_class)->finalize (object);
-}
-
-static void
-gb_new_project_dialog_get_property (GObject    *object,
-                                    guint       prop_id,
-                                    GValue     *value,
-                                    GParamSpec *pspec)
-{
-  GbNewProjectDialog *self = GB_NEW_PROJECT_DIALOG (object);
-
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
-}
-
-static void
-gb_new_project_dialog_set_property (GObject      *object,
-                                    guint         prop_id,
-                                    const GValue *value,
-                                    GParamSpec   *pspec)
-{
-  GbNewProjectDialog *self = GB_NEW_PROJECT_DIALOG (object);
-
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
-}
-
-static void
 gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkBindingSet *binding_set;
-
-  object_class->finalize = gb_new_project_dialog_finalize;
-  object_class->get_property = gb_new_project_dialog_get_property;
-  object_class->set_property = gb_new_project_dialog_set_property;
 
   gSignals [BACK] =
     g_signal_new_class_handler ("back",
@@ -609,9 +599,11 @@ gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
 
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, back_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, cancel_button);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_error_label);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_location_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_location_entry);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_progress);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_spinner);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_uri_entry);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, create_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, file_chooser);
@@ -659,6 +651,12 @@ gb_new_project_dialog_init (GbNewProjectDialog *self)
   g_signal_connect_object (self->clone_uri_entry,
                            "changed",
                            G_CALLBACK (gb_new_project_dialog__clone_uri_entry_changed),
+                           self,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (self->clone_location_entry,
+                           "changed",
+                           G_CALLBACK (gb_new_project_dialog__clone_location_entry_changed),
                            self,
                            G_CONNECT_SWAPPED);
 

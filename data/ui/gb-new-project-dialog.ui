@@ -410,6 +410,31 @@
                     </child>
                   </object>
                 </child>
+                <child>
+                  <object class="GtkLabel" id="clone_error_label">
+                    <property name="valign">start</property>
+                    <property name="vexpand">true</property>
+                    <property name="visible">false</property>
+                    <style>
+                      <class name="error-label"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="pack-type">end</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkSpinner" id="clone_spinner">
+                    <property name="vexpand">false</property>
+                    <property name="active">true</property>
+                    <property name="margin">24</property>
+                    <property name="width-request">24</property>
+                    <property name="height-request">24</property>
+                  </object>
+                  <packing>
+                    <property name="pack-type">end</property>
+                  </packing>
+                </child>
               </object>
             </child>
           </object>
