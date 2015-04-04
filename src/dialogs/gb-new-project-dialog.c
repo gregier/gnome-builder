@@ -453,15 +453,28 @@ gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
                                                 GtkEntry           *entry)
 {
   const gchar *text;
-  gboolean sensitive;
+  gboolean is_valid;
 
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
   g_assert (GTK_IS_ENTRY (entry));
 
   text = gtk_entry_get_text (entry);
-  sensitive = !gb_str_empty0 (text);
+  is_valid = ide_vcs_uri_is_valid (text);
 
-  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), sensitive);
+  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), is_valid);
+
+  if (is_valid)
+    {
+      g_object_set (self->clone_uri_entry,
+                    "secondary-icon-name", NULL,
+                    NULL);
+    }
+  else
+    {
+      g_object_set (self->clone_uri_entry,
+                    "secondary-icon-name", "dialog-warning-symbolic",
+                    NULL);
+    }
 }
 
 static void
