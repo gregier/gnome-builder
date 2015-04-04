@@ -34,6 +34,7 @@ struct _GbNewProjectDialog
   GtkButton            *back_button;
   GtkButton            *cancel_button;
   GtkFileChooserWidget *clone_location_button;
+  GtkEntry             *clone_location_entry;
   GtkProgressBar       *clone_progress;
   GtkEntry             *clone_uri_entry;
   GtkButton            *create_button;
@@ -452,22 +453,36 @@ static void
 gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
                                                 GtkEntry           *entry)
 {
+  g_autoptr(IdeVcsUri) uri = NULL;
   const gchar *text;
-  gboolean is_valid;
 
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
   g_assert (GTK_IS_ENTRY (entry));
 
   text = gtk_entry_get_text (entry);
-  is_valid = ide_vcs_uri_is_valid (text);
+  uri = ide_vcs_uri_new (text);
 
-  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), is_valid);
+  gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), !!uri);
 
-  if (is_valid)
+  if (uri != NULL)
     {
+      const gchar *path;
+      gchar *name = NULL;
+
       g_object_set (self->clone_uri_entry,
                     "secondary-icon-name", NULL,
                     NULL);
+
+      path = ide_vcs_uri_get_path (uri);
+
+      if (path != NULL)
+        {
+          name = g_path_get_basename (path);
+          if (g_str_has_suffix (name, ".git"))
+            *(strrchr (name, '.')) = '\0';
+          gtk_entry_set_text (self->clone_location_entry, name);
+          g_free (name);
+        }
     }
   else
     {
@@ -569,6 +584,7 @@ gb_new_project_dialog_class_init (GbNewProjectDialogClass *klass)
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, back_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, cancel_button);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_location_button);
+  GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_location_entry);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_progress);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, clone_uri_entry);
   GB_WIDGET_CLASS_BIND (klass, GbNewProjectDialog, create_button);
