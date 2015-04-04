@@ -174,7 +174,7 @@ gb_new_project_dialog__clone_cb (GObject      *object,
    * Wait for a second so animations can complete before opening
    * the project. Otherwise, it's pretty jarring to the user.
    */
-  g_timeout_add_seconds (1, open_after_timeout, g_object_ref (task));
+  g_timeout_add (ANIMATION_DURATION_MSEC, open_after_timeout, g_object_ref (task));
 }
 
 static gboolean
