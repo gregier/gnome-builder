@@ -480,7 +480,8 @@ gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
           name = g_path_get_basename (path);
           if (g_str_has_suffix (name, ".git"))
             *(strrchr (name, '.')) = '\0';
-          gtk_entry_set_text (self->clone_location_entry, name);
+          if (!g_str_equal (name, "/"))
+            gtk_entry_set_text (self->clone_location_entry, name);
           g_free (name);
         }
     }
