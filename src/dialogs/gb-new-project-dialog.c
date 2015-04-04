@@ -255,8 +255,10 @@ gb_new_project_dialog_begin_clone (GbNewProjectDialog *self)
 {
   g_autoptr(GTask) task = NULL;
   g_autoptr(GFile) location = NULL;
+  g_autoptr(GFile) child = NULL;
   CloneRequest *req;
   const gchar *uri;
+  const gchar *child_name;
 
   g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
 
@@ -264,8 +266,19 @@ gb_new_project_dialog_begin_clone (GbNewProjectDialog *self)
   gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), FALSE);
 
   uri = gtk_entry_get_text (self->clone_uri_entry);
+  child_name = gtk_entry_get_text (self->clone_location_entry);
   location = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (self->clone_location_button));
-  req = clone_request_new (uri, location);
+
+  if (child_name != NULL)
+    {
+      child = g_file_get_child (location, child_name);
+      req = clone_request_new (uri, child);
+    }
+  else
+    {
+      req = clone_request_new (uri, location);
+    }
+
   task = g_task_new (self, NULL, gb_new_project_dialog__clone_cb, self);
   g_task_set_task_data (task, req, clone_request_free);
   g_task_run_in_thread (task, gb_new_project_dialog__clone_worker);
