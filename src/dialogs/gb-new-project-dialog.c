@@ -359,10 +359,22 @@ gb_new_project_dialog__stack_notify_visible_child (GbNewProjectDialog *self,
     }
   else if (visible_child == GTK_WIDGET (self->page_clone_remote))
     {
+      g_autofree gchar *text= NULL;
+      GtkClipboard *clipboard;
+
+      clipboard = gtk_widget_get_clipboard (GTK_WIDGET (self), GDK_SELECTION_CLIPBOARD);
+      text = gtk_clipboard_wait_for_text (clipboard);
+      if (!ide_str_empty0 (text) &&
+          (strstr (text, "://") || strchr (text, '@')) &&
+          ide_vcs_uri_is_valid (text))
+        gtk_entry_set_text (self->clone_uri_entry, text);
+
       gtk_widget_hide (GTK_WIDGET (self->cancel_button));
       gtk_widget_show (GTK_WIDGET (self->back_button));
       gtk_widget_set_sensitive (GTK_WIDGET (self->create_button), FALSE);
       gtk_header_bar_set_title (self->header_bar, _("Clone Repository"));
+
+      g_signal_emit_by_name (G_OBJECT (self->clone_uri_entry), "changed");
     }
 }
 
