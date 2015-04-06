@@ -214,25 +214,10 @@ gb_application_actions_new_project (GSimpleAction *action,
 {
   GbApplication *self = user_data;
   GtkWindow *window;
-  GList *windows;
-  GList *iter;
 
   g_assert (GB_IS_APPLICATION (self));
 
-  windows = gtk_application_get_windows (GTK_APPLICATION (self));
-
-  for (iter = windows; iter; iter = iter->next)
-    {
-      if (GB_IS_PROJECT_WINDOW (iter->data))
-        {
-          gtk_window_present (GTK_WINDOW (iter->data));
-          return;
-        }
-    }
-
   window = g_object_new (GB_TYPE_NEW_PROJECT_DIALOG,
-                         "modal", TRUE,
-                         "transient-for", windows ? windows->data : NULL,
                          "type-hint", GDK_WINDOW_TYPE_HINT_DIALOG,
                          NULL);
 
