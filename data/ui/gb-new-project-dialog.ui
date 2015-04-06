@@ -127,7 +127,7 @@
                                 <property name="visible">true</property>
                                 <child>
                                   <object class="GtkImage">
-                                    <property name="icon-name">gitg</property>
+                                    <property name="icon-name">builder-vcs-git</property>
                                     <property name="pixel-size">32</property>
                                     <property name="visible">true</property>
                                   </object>
@@ -303,7 +303,7 @@
                   <object class="GtkImage">
                     <property name="valign">center</property>
                     <property name="vexpand">true</property>
-                    <property name="icon-name">gitg</property>
+                    <property name="icon-name">builder-vcs-git</property>
                     <property name="pixel-size">128</property>
                     <property name="visible">true</property>
                   </object>
