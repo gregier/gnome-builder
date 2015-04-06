@@ -559,7 +559,6 @@ gb_project_window__new_button_clicked (GbProjectWindow *self,
 
   window = g_object_new (GB_TYPE_NEW_PROJECT_DIALOG,
                          "destroy-with-parent", TRUE,
-                         "modal", TRUE,
                          "transient-for", self,
                          "type-hint", GDK_WINDOW_TYPE_HINT_DIALOG,
                          "visible", TRUE,
