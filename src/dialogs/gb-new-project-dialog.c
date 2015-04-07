@@ -177,45 +177,6 @@ gb_new_project_dialog__clone_cb (GObject      *object,
   g_timeout_add (ANIMATION_DURATION_MSEC, open_after_timeout, g_object_ref (task));
 }
 
-static gboolean
-update_progress_cb (gpointer data)
-{
-  g_autoptr(GbNewProjectDialog) self = data;
-
-  g_assert (GB_IS_NEW_PROJECT_DIALOG (self));
-
-  ide_object_animate (self->clone_progress,
-                      IDE_ANIMATION_EASE_IN_OUT_QUAD,
-                      ANIMATION_DURATION_MSEC,
-                      NULL,
-                      "fraction", self->progress_fraction,
-                      NULL);
-
-  return G_SOURCE_REMOVE;
-}
-
-static void
-transfer_progress_cb (GgitRemoteCallbacks  *callbacks,
-                      GgitTransferProgress *stats,
-                      gpointer              user_data)
-{
-  GbNewProjectDialog *self = user_data;
-  guint total;
-  guint received;
-
-  g_assert (GGIT_IS_REMOTE_CALLBACKS (callbacks));
-  g_assert (stats != NULL);
-
-  total = ggit_transfer_progress_get_total_objects (stats);
-  received = ggit_transfer_progress_get_received_objects (stats);
-  if (total == 0)
-    return;
-
-  self->progress_fraction = (gdouble)received / (gdouble)total;
-
-  g_timeout_add (0, update_progress_cb, g_object_ref (self));
-}
-
 static void
 gb_new_project_dialog__clone_worker (GTask        *task,
                                      gpointer      source_object,
@@ -237,12 +198,12 @@ gb_new_project_dialog__clone_worker (GTask        *task,
 
   clone_options = ggit_clone_options_new ();
 
+  callbacks = g_object_new (IDE_TYPE_GIT_REMOTE_CALLBACKS, NULL);
+  g_object_bind_property (callbacks, "fraction", self->clone_progress, "fraction", G_BINDING_SYNC_CREATE);
+  ggit_clone_options_set_remote_callbacks (clone_options, callbacks);
+
   ggit_clone_options_set_is_bare (clone_options, FALSE);
   ggit_clone_options_set_checkout_branch (clone_options, "master");
-
-  callbacks = g_object_new (GGIT_TYPE_REMOTE_CALLBACKS, NULL);
-  g_signal_connect (callbacks, "transfer-progress", G_CALLBACK (transfer_progress_cb), self);
-  ggit_clone_options_set_remote_callbacks (clone_options, callbacks);
 
   repository = ggit_repository_clone (req->uri, req->location, clone_options, &error);
 
