@@ -115,19 +115,21 @@ ide_git_remote_callbacks_real_credentials (GgitRemoteCallbacks  *callbacks,
 
   IDE_TRACE_MSG ("username=%s url=%s", username_from_url ?: "", url);
 
-#if 0
-	GGIT_CREDTYPE_SSH_KEY            = (1u << 1),
-	GGIT_CREDTYPE_SSH_CUSTOM         = (1u << 2),
-	GGIT_CREDTYPE_DEFAULT            = (1u << 3),
-	GGIT_CREDTYPE_SSH_INTERACTIVE    = (1u << 4),
-#endif
+  if ((allowed_types & GGIT_CREDTYPE_SSH_KEY) != 0)
+    {
+      GgitCredSshKeyFromAgent *cred;
 
-#if 1
-  {
-    GgitCredSshKeyFromAgent *cred = ggit_cred_ssh_key_from_agent_new (username_from_url, error);
-    return GGIT_CRED (cred);
-  }
-#endif
+      cred = ggit_cred_ssh_key_from_agent_new (username_from_url, error);
+      ret = GGIT_CRED (cred);
+    }
+
+  if ((allowed_types & GGIT_CREDTYPE_SSH_INTERACTIVE) != 0)
+    {
+      GgitCredSshInteractive *cred;
+
+      cred = ggit_cred_ssh_interactive_new (username_from_url, error);
+      ret = GGIT_CRED (cred);
+    }
 
   IDE_RETURN (ret);
 }
