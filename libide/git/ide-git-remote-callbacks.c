@@ -18,6 +18,7 @@
 
 #include <glib/gi18n.h>
 
+#include "ide-debug.h"
 #include "ide-git-remote-callbacks.h"
 
 struct _IdeGitRemoteCallbacks
@@ -98,6 +99,39 @@ ide_git_remote_callbacks_real_transfer_progress (GgitRemoteCallbacks  *callbacks
   g_timeout_add (0, ide_git_remote_callbacks__notify_fraction_cb, g_object_ref (self));
 }
 
+static GgitCred *
+ide_git_remote_callbacks_real_credentials (GgitRemoteCallbacks  *callbacks,
+                                           const gchar          *url,
+                                           const gchar          *username_from_url,
+                                           GgitCredtype          allowed_types,
+                                           GError              **error)
+{
+  IdeGitRemoteCallbacks *self = (IdeGitRemoteCallbacks *)callbacks;
+  GgitCred *ret = NULL;
+
+  IDE_ENTRY;
+
+  g_assert (IDE_IS_GIT_REMOTE_CALLBACKS (self));
+
+  IDE_TRACE_MSG ("username=%s url=%s", username_from_url ?: "", url);
+
+#if 0
+	GGIT_CREDTYPE_SSH_KEY            = (1u << 1),
+	GGIT_CREDTYPE_SSH_CUSTOM         = (1u << 2),
+	GGIT_CREDTYPE_DEFAULT            = (1u << 3),
+	GGIT_CREDTYPE_SSH_INTERACTIVE    = (1u << 4),
+#endif
+
+#if 1
+  {
+    GgitCredSshKeyFromAgent *cred = ggit_cred_ssh_key_from_agent_new (username_from_url, error);
+    return GGIT_CRED (cred);
+  }
+#endif
+
+  IDE_RETURN (ret);
+}
+
 static void
 ide_git_remote_callbacks_get_property (GObject    *object,
                                        guint       prop_id,
@@ -126,6 +160,7 @@ ide_git_remote_callbacks_class_init (IdeGitRemoteCallbacksClass *klass)
   object_class->get_property = ide_git_remote_callbacks_get_property;
 
   callbacks_class->transfer_progress = ide_git_remote_callbacks_real_transfer_progress;
+  callbacks_class->credentials = ide_git_remote_callbacks_real_credentials;
 
   gParamSpecs [PROP_FRACTION] =
     g_param_spec_double ("fraction",
