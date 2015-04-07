@@ -49,6 +49,7 @@ gb_application_actions_preferences (GSimpleAction *action,
 
       window = g_object_new (GB_TYPE_PREFERENCES_WINDOW,
                              "type-hint", GDK_WINDOW_TYPE_HINT_DIALOG,
+                             "window-position", GTK_WIN_POS_CENTER,
                              NULL);
       ide_set_weak_pointer (&self->preferences_window, window);
     }
@@ -209,6 +210,7 @@ gb_application_actions_new_project (GSimpleAction *action,
 
   window = g_object_new (GB_TYPE_NEW_PROJECT_DIALOG,
                          "type-hint", GDK_WINDOW_TYPE_HINT_DIALOG,
+                         "window-position", GTK_WIN_POS_CENTER,
                          NULL);
 
   g_signal_connect_object (window,
