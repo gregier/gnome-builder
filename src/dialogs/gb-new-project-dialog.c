@@ -492,6 +492,7 @@ gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
 
       g_object_set (self->clone_uri_entry,
                     "secondary-icon-name", NULL,
+                    "secondary-icon-tooltip-text", NULL,
                     NULL);
 
       path = ide_vcs_uri_get_path (uri);
@@ -510,6 +511,7 @@ gb_new_project_dialog__clone_uri_entry_changed (GbNewProjectDialog *self,
     {
       g_object_set (self->clone_uri_entry,
                     "secondary-icon-name", "dialog-warning-symbolic",
+                    "secondary-icon-tooltip-text", _("A valid Git URL is required"),
                     NULL);
     }
 }
