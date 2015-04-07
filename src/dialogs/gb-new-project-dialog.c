@@ -197,17 +197,17 @@ gb_new_project_dialog__clone_worker (GTask        *task,
   g_assert (!cancellable || G_IS_CANCELLABLE (cancellable));
 
   clone_options = ggit_clone_options_new ();
+  ggit_clone_options_set_is_bare (clone_options, FALSE);
+  ggit_clone_options_set_checkout_branch (clone_options, "master");
 
   callbacks = g_object_new (IDE_TYPE_GIT_REMOTE_CALLBACKS, NULL);
   g_object_bind_property (callbacks, "fraction", self->clone_progress, "fraction", G_BINDING_SYNC_CREATE);
   ggit_clone_options_set_remote_callbacks (clone_options, callbacks);
 
-  ggit_clone_options_set_is_bare (clone_options, FALSE);
-  ggit_clone_options_set_checkout_branch (clone_options, "master");
-
   repository = ggit_repository_clone (req->uri, req->location, clone_options, &error);
 
   g_object_unref (callbacks);
+  ggit_clone_options_free (clone_options);
 
   if (repository == NULL)
     {
