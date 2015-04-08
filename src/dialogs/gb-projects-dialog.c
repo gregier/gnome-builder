@@ -39,21 +39,22 @@ struct _GbProjectsDialog
 {
   GtkApplicationWindow parent_instance;
 
-  GSettings       *settings;
+  GSettings         *settings;
 
-  IdePatternSpec  *search_pattern;
-  GList           *selected;
+  IdeRecentProjects *recent_projects;
+  IdePatternSpec    *search_pattern;
+  GList             *selected;
 
-  GtkActionBar    *action_bar;
-  GtkButton       *cancel_button;
-  GtkButton       *delete_button;
-  GtkHeaderBar    *header_bar;
-  GtkListBox      *listbox;
-  GtkButton       *new_button;
-  GtkSearchBar    *search_bar;
-  GtkToggleButton *search_button;
-  GtkSearchEntry  *search_entry;
-  GtkToggleButton *select_button;
+  GtkActionBar      *action_bar;
+  GtkButton         *cancel_button;
+  GtkButton         *delete_button;
+  GtkHeaderBar      *header_bar;
+  GtkListBox        *listbox;
+  GtkButton         *new_button;
+  GtkSearchBar      *search_bar;
+  GtkToggleButton   *search_button;
+  GtkSearchEntry    *search_entry;
+  GtkToggleButton   *select_button;
 };
 
 G_DEFINE_TYPE (GbProjectsDialog, gb_projects_dialog, GTK_TYPE_APPLICATION_WINDOW)
@@ -306,15 +307,15 @@ create_row (GbProjectsDialog *self,
 }
 
 static void
-gb_projects_dialog__miner_discovered_cb (GbProjectsDialog *self,
-                                        IdeProjectInfo  *project_info,
-                                        IdeProjectMiner *miner)
+gb_projects_dialog__recent_projects_added (GbProjectsDialog  *self,
+                                           IdeProjectInfo    *project_info,
+                                           IdeRecentProjects *recent_projects)
 {
   GtkWidget *row;
 
   g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (IDE_IS_PROJECT_INFO (project_info));
-  g_assert (IDE_IS_PROJECT_MINER (miner));
+  g_assert (IDE_IS_RECENT_PROJECTS (recent_projects));
 
   row = create_row (self, project_info);
 #if 0
@@ -325,17 +326,18 @@ gb_projects_dialog__miner_discovered_cb (GbProjectsDialog *self,
 }
 
 static void
-gb_projects_dialog__miner_mine_cb (GObject      *object,
-                                  GAsyncResult *result,
-                                  gpointer      user_data)
+gb_projects_dialog__recent_projects_discover_cb (GObject      *object,
+                                                 GAsyncResult *result,
+                                                 gpointer      user_data)
 {
+  IdeRecentProjects *recent_projects = (IdeRecentProjects *)object;
   g_autoptr(GbProjectsDialog) self = user_data;
-  IdeProjectMiner *miner = (IdeProjectMiner *)object;
   GError *error = NULL;
 
+  g_assert (IDE_IS_RECENT_PROJECTS (recent_projects));
   g_assert (GB_IS_PROJECTS_DIALOG (self));
 
-  if (!ide_project_miner_mine_finish (miner, result, &error))
+  if (!ide_recent_projects_discover_finish (recent_projects, result, &error))
     {
       g_warning ("%s", error->message);
       g_clear_error (&error);
@@ -583,9 +585,9 @@ gb_projects_dialog_constructed (GObject *object)
                         "root-directory", NULL,
                         NULL);
 
-  g_signal_connect_object (miner,
-                           "discovered",
-                           G_CALLBACK (gb_projects_dialog__miner_discovered_cb),
+  g_signal_connect_object (self->recent_projects,
+                           "added",
+                           G_CALLBACK (gb_projects_dialog__recent_projects_added),
                            self,
                            G_CONNECT_SWAPPED);
 
@@ -635,10 +637,10 @@ gb_projects_dialog_constructed (GObject *object)
                                 gb_projects_dialog__listbox_filter,
                                 self, NULL);
 
-  ide_project_miner_mine_async (miner,
-                                NULL,
-                                gb_projects_dialog__miner_mine_cb,
-                                g_object_ref (self));
+  ide_recent_projects_discover_async (self->recent_projects,
+                                      NULL, /* TODO: cancellable */
+                                      gb_projects_dialog__recent_projects_discover_cb,
+                                      g_object_ref (self));
 
   G_OBJECT_CLASS (gb_projects_dialog_parent_class)->constructed (object);
 }
@@ -691,6 +693,7 @@ gb_projects_dialog_finalize (GObject *object)
 {
   GbProjectsDialog *self = (GbProjectsDialog *)object;
 
+  g_clear_object (&self->recent_projects);
   g_clear_object (&self->settings);
   g_clear_pointer (&self->selected, (GDestroyNotify)g_list_free);
   g_clear_pointer (&self->search_pattern, (GDestroyNotify)ide_pattern_spec_unref);
@@ -737,4 +740,6 @@ gb_projects_dialog_init (GbProjectsDialog *self)
                            G_CONNECT_SWAPPED);
 
   self->settings = g_settings_new ("org.gnome.builder");
+
+  self->recent_projects = ide_recent_projects_new ();
 }
