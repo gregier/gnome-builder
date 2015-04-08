@@ -18,13 +18,20 @@
 
 #include <glib/gi18n.h>
 
+#include "ide-animation.h"
 #include "ide-debug.h"
 #include "ide-git-remote-callbacks.h"
+#include "ide-macros.h"
+#include "ide-progress.h"
+
+#define ANIMATION_DURATION_MSEC 250
 
 struct _IdeGitRemoteCallbacks
 {
   GgitRemoteCallbacks  parent_instance;
 
+  IdeAnimation        *animation;
+  IdeProgress         *progress;
   gdouble              fraction;
 };
 
@@ -50,6 +57,21 @@ ide_git_remote_callbacks_new (void)
 }
 
 /**
+ * ide_git_remote_callbacks_get_progress:
+ *
+ * Gets the #IdeProgress for the operation.
+ *
+ * Returns: (transfer none): An #IdeProgress.
+ */
+IdeProgress *
+ide_git_remote_callbacks_get_progress (IdeGitRemoteCallbacks *self)
+{
+  g_return_val_if_fail (IDE_IS_GIT_REMOTE_CALLBACKS (self), NULL);
+
+  return self->progress;
+}
+
+/**
  * ide_git_remote_callbacks_get_fraction:
  *
  * Gets the fraction of the current operation. This should typically be bound using
@@ -69,8 +91,23 @@ static gboolean
 ide_git_remote_callbacks__notify_fraction_cb (gpointer data)
 {
   g_autoptr(IdeGitRemoteCallbacks) self = data;
+  IdeAnimation *animation;
 
   g_assert (IDE_IS_GIT_REMOTE_CALLBACKS (self));
+
+  if ((animation = self->animation))
+    {
+      ide_clear_weak_pointer (&self->animation);
+      ide_animation_stop (animation);
+    }
+
+  animation = ide_object_animate (self->progress,
+                                  IDE_ANIMATION_EASE_IN_OUT_QUAD,
+                                  ANIMATION_DURATION_MSEC,
+                                  NULL,
+                                  "fraction", self->fraction,
+                                  NULL);
+  ide_set_weak_pointer (&self->animation, animation);
 
   g_object_notify_by_pspec (G_OBJECT (self), gParamSpecs [PROP_FRACTION]);
 
@@ -135,6 +172,16 @@ ide_git_remote_callbacks_real_credentials (GgitRemoteCallbacks  *callbacks,
 }
 
 static void
+ide_git_remote_callbacks_finalize (GObject *object)
+{
+  IdeGitRemoteCallbacks *self = (IdeGitRemoteCallbacks *)object;
+
+  g_clear_object (&self->progress);
+
+  G_OBJECT_CLASS (ide_git_remote_callbacks_parent_class)->finalize (object);
+}
+
+static void
 ide_git_remote_callbacks_get_property (GObject    *object,
                                        guint       prop_id,
                                        GValue     *value,
@@ -159,6 +206,7 @@ ide_git_remote_callbacks_class_init (IdeGitRemoteCallbacksClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GgitRemoteCallbacksClass *callbacks_class = GGIT_REMOTE_CALLBACKS_CLASS (klass);
 
+  object_class->finalize = ide_git_remote_callbacks_finalize;
   object_class->get_property = ide_git_remote_callbacks_get_property;
 
   callbacks_class->transfer_progress = ide_git_remote_callbacks_real_transfer_progress;
@@ -178,4 +226,5 @@ ide_git_remote_callbacks_class_init (IdeGitRemoteCallbacksClass *klass)
 static void
 ide_git_remote_callbacks_init (IdeGitRemoteCallbacks *self)
 {
+  self->progress = g_object_new (IDE_TYPE_PROGRESS, NULL);
 }

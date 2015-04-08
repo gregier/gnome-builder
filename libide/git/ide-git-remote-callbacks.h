@@ -21,6 +21,8 @@
 
 #include <libgit2-glib/ggit.h>
 
+#include "ide-progress.h"
+
 G_BEGIN_DECLS
 
 #define IDE_TYPE_GIT_REMOTE_CALLBACKS            (ide_git_remote_callbacks_get_type())
@@ -39,6 +41,7 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (IdeGitRemoteCallbacks, g_object_unref)
 GType                ide_git_remote_callbacks_get_type     (void);
 GgitRemoteCallbacks *ide_git_remote_callbacks_new          (void);
 gdouble              ide_git_remote_callbacks_get_fraction (IdeGitRemoteCallbacks *self);
+IdeProgress         *ide_git_remote_callbacks_get_progress (IdeGitRemoteCallbacks *self);
 
 G_END_DECLS
 
