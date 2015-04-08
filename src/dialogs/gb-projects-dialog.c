@@ -76,9 +76,22 @@ gb_projects_dialog__listbox_row_activated_cb (GbProjectsDialog *self,
   if (gtk_toggle_button_get_active (self->select_button))
     {
       gboolean selected;
+      GList *children;
+      GList *iter;
 
-      selected = gb_recent_project_row_get_selected (GB_RECENT_PROJECT_ROW (row));
-      gb_recent_project_row_set_selected (GB_RECENT_PROJECT_ROW (row), !selected);
+      selected = !gb_recent_project_row_get_selected (GB_RECENT_PROJECT_ROW (row));
+      gb_recent_project_row_set_selected (GB_RECENT_PROJECT_ROW (row), selected);
+
+      children = gtk_container_get_children (GTK_CONTAINER (listbox));
+      for (iter = children; !selected && iter; iter = iter->next)
+        {
+          if (gb_recent_project_row_get_selected (iter->data))
+            selected = TRUE;
+        }
+      g_list_free (children);
+
+      gtk_widget_set_sensitive (GTK_WIDGET (self->delete_button), selected);
+
       return;
     }
 
