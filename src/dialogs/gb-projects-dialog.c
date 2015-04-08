@@ -1,4 +1,4 @@
-/* gb-project-window.c
+/* gb-projects-dialog.c
  *
  * Copyright (C) 2015 Christian Hergert <christian@hergert.me>
  *
@@ -20,7 +20,7 @@
 # define _GNU_SOURCE
 #endif
 
-#define G_LOG_DOMAIN "gb-project-window"
+#define G_LOG_DOMAIN "gb-projects-dialog"
 
 #include <glib/gi18n.h>
 #include <ide.h>
@@ -29,13 +29,13 @@
 #include "gb-editor-document.h"
 #include "gb-glib.h"
 #include "gb-new-project-dialog.h"
-#include "gb-project-window.h"
+#include "gb-projects-dialog.h"
 #include "gb-scrolled-window.h"
 #include "gb-string.h"
 #include "gb-widget.h"
 #include "gb-workbench.h"
 
-struct _GbProjectWindow
+struct _GbProjectsDialog
 {
   GtkApplicationWindow parent_instance;
 
@@ -56,15 +56,15 @@ struct _GbProjectWindow
   GtkToggleButton *select_button;
 };
 
-G_DEFINE_TYPE (GbProjectWindow, gb_project_window, GTK_TYPE_APPLICATION_WINDOW)
+G_DEFINE_TYPE (GbProjectsDialog, gb_projects_dialog, GTK_TYPE_APPLICATION_WINDOW)
 
 static void
-gb_project_window__check_toggled (GbProjectWindow *self,
+gb_projects_dialog__check_toggled (GbProjectsDialog *self,
                                   GtkCheckButton  *check_button)
 {
   GtkWidget *row;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (GTK_IS_CHECK_BUTTON (check_button));
 
   for (row = GTK_WIDGET (check_button);
@@ -86,7 +86,7 @@ gb_project_window__check_toggled (GbProjectWindow *self,
 }
 
 static void
-gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
+gb_projects_dialog__listbox_row_activated_cb (GbProjectsDialog *self,
                                              GtkListBoxRow   *row,
                                              GtkListBox      *listbox)
 {
@@ -94,7 +94,7 @@ gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
   GApplication *app;
   GFile *file;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (GTK_IS_LIST_BOX_ROW (row));
   g_assert (GTK_IS_LIST_BOX (listbox));
 
@@ -137,7 +137,7 @@ gb_project_window__listbox_row_activated_cb (GbProjectWindow *self,
 }
 
 static gboolean
-is_recent_project (GbProjectWindow *self,
+is_recent_project (GbProjectsDialog *self,
                    IdeProjectInfo  *info)
 {
   gchar *uri;
@@ -146,7 +146,7 @@ is_recent_project (GbProjectWindow *self,
   GFile *file;
   gsize i;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (G_IS_SETTINGS (self->settings));
   g_assert (IDE_IS_PROJECT_INFO (info));
 
@@ -170,7 +170,7 @@ is_recent_project (GbProjectWindow *self,
 }
 
 static GtkWidget *
-create_row (GbProjectWindow *self,
+create_row (GbProjectsDialog *self,
             IdeProjectInfo  *project_info)
 {
   g_autofree gchar *relative_path = NULL;
@@ -191,7 +191,7 @@ create_row (GbProjectWindow *self,
   const gchar *icon_name = "folder";
   g_autoptr(GFile) home = NULL;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (IDE_IS_PROJECT_INFO (project_info));
 
   name = ide_project_info_get_name (project_info);
@@ -225,7 +225,7 @@ create_row (GbProjectWindow *self,
                         NULL);
   g_signal_connect_object (check,
                            "toggled",
-                           G_CALLBACK (gb_project_window__check_toggled),
+                           G_CALLBACK (gb_projects_dialog__check_toggled),
                            self,
                            G_CONNECT_SWAPPED);
 
@@ -306,13 +306,13 @@ create_row (GbProjectWindow *self,
 }
 
 static void
-gb_project_window__miner_discovered_cb (GbProjectWindow *self,
+gb_projects_dialog__miner_discovered_cb (GbProjectsDialog *self,
                                         IdeProjectInfo  *project_info,
                                         IdeProjectMiner *miner)
 {
   GtkWidget *row;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (IDE_IS_PROJECT_INFO (project_info));
   g_assert (IDE_IS_PROJECT_MINER (miner));
 
@@ -325,15 +325,15 @@ gb_project_window__miner_discovered_cb (GbProjectWindow *self,
 }
 
 static void
-gb_project_window__miner_mine_cb (GObject      *object,
+gb_projects_dialog__miner_mine_cb (GObject      *object,
                                   GAsyncResult *result,
                                   gpointer      user_data)
 {
-  g_autoptr(GbProjectWindow) self = user_data;
+  g_autoptr(GbProjectsDialog) self = user_data;
   IdeProjectMiner *miner = (IdeProjectMiner *)object;
   GError *error = NULL;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
 
   if (!ide_project_miner_mine_finish (miner, result, &error))
     {
@@ -343,7 +343,7 @@ gb_project_window__miner_mine_cb (GObject      *object,
 }
 
 static void
-gb_project_window__listbox_header_cb (GtkListBoxRow *row,
+gb_projects_dialog__listbox_header_cb (GtkListBoxRow *row,
                                       GtkListBoxRow *before,
                                       gpointer       user_data)
 {
@@ -359,7 +359,7 @@ gb_project_window__listbox_header_cb (GtkListBoxRow *row,
 }
 
 static gint
-gb_project_window__listbox_sort (GtkListBoxRow *row1,
+gb_projects_dialog__listbox_sort (GtkListBoxRow *row1,
                                  GtkListBoxRow *row2,
                                  gpointer       user_data)
 {
@@ -406,15 +406,15 @@ gb_project_window__listbox_sort (GtkListBoxRow *row1,
 }
 
 static gboolean
-gb_project_window__listbox_filter (GtkListBoxRow *row,
+gb_projects_dialog__listbox_filter (GtkListBoxRow *row,
                                    gpointer       user_data)
 {
-  GbProjectWindow *self = user_data;
+  GbProjectsDialog *self = user_data;
   IdeProjectInfo *info;
   const gchar *name;
 
   g_assert (GTK_IS_LIST_BOX_ROW (row));
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
 
   info = g_object_get_data (G_OBJECT (row), "IDE_PROJECT_INFO");
 
@@ -427,14 +427,14 @@ gb_project_window__listbox_filter (GtkListBoxRow *row,
 }
 
 static void
-gb_project_window__select_button_notify_active (GbProjectWindow *self,
+gb_projects_dialog__select_button_notify_active (GbProjectsDialog *self,
                                                 GParamSpec      *pspec,
                                                 GtkToggleButton *select_button)
 {
   GtkStyleContext *style_context;
   gboolean active;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (GTK_IS_TOGGLE_BUTTON (select_button));
 
   active = gtk_toggle_button_get_active (select_button);
@@ -463,13 +463,13 @@ gb_project_window__select_button_notify_active (GbProjectWindow *self,
 }
 
 static void
-gb_project_window__cancel_button_clicked (GbProjectWindow *self,
+gb_projects_dialog__cancel_button_clicked (GbProjectsDialog *self,
                                           GtkButton       *cancel_button)
 {
   GList *rows;
   GList *iter;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (GTK_IS_BUTTON (cancel_button));
 
   /* reset back to normal mode */
@@ -493,12 +493,12 @@ gb_project_window__cancel_button_clicked (GbProjectWindow *self,
 }
 
 static void
-gb_project_window__search_entry_activate (GbProjectWindow *self,
+gb_projects_dialog__search_entry_activate (GbProjectsDialog *self,
                                           GtkEntry        *entry)
 {
   GtkListBoxRow *row;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (GTK_IS_ENTRY (entry));
 
   /* FIXME: We use 1 because 0 doesn't work and we have no API to get
@@ -513,12 +513,12 @@ gb_project_window__search_entry_activate (GbProjectWindow *self,
 }
 
 static void
-gb_project_window__search_entry_changed (GbProjectWindow *self,
+gb_projects_dialog__search_entry_changed (GbProjectsDialog *self,
                                          GtkEntry        *entry)
 {
   const gchar *text;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (GTK_IS_ENTRY (entry));
 
   g_clear_pointer (&self->search_pattern, (GDestroyNotify)ide_pattern_spec_unref);
@@ -532,13 +532,13 @@ gb_project_window__search_entry_changed (GbProjectWindow *self,
 }
 
 static void
-gb_project_window__window_open_project (GbProjectWindow    *self,
+gb_projects_dialog__window_open_project (GbProjectsDialog    *self,
                                         GFile              *project_file,
                                         GbNewProjectDialog *dialog)
 {
   GApplication *app = g_application_get_default ();
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (G_IS_FILE (project_file));
   g_assert (GB_IS_NEW_PROJECT_DIALOG (dialog));
   g_assert (GB_IS_APPLICATION (app));
@@ -549,12 +549,12 @@ gb_project_window__window_open_project (GbProjectWindow    *self,
 }
 
 static void
-gb_project_window__new_button_clicked (GbProjectWindow *self,
+gb_projects_dialog__new_button_clicked (GbProjectsDialog *self,
                                        GtkButton       *new_button)
 {
   GtkWindow *window;
 
-  g_assert (GB_IS_PROJECT_WINDOW (self));
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
   g_assert (GTK_IS_BUTTON (new_button));
 
   window = g_object_new (GB_TYPE_NEW_PROJECT_DIALOG,
@@ -566,7 +566,7 @@ gb_project_window__new_button_clicked (GbProjectWindow *self,
 
   g_signal_connect_object (window,
                            "open-project",
-                           G_CALLBACK (gb_project_window__window_open_project),
+                           G_CALLBACK (gb_projects_dialog__window_open_project),
                            self,
                            G_CONNECT_SWAPPED);
 
@@ -574,9 +574,9 @@ gb_project_window__new_button_clicked (GbProjectWindow *self,
 }
 
 static void
-gb_project_window_constructed (GObject *object)
+gb_projects_dialog_constructed (GObject *object)
 {
-  GbProjectWindow *self = (GbProjectWindow *)object;
+  GbProjectsDialog *self = (GbProjectsDialog *)object;
   g_autoptr(IdeProjectMiner) miner = NULL;
 
   miner = g_object_new (IDE_TYPE_AUTOTOOLS_PROJECT_MINER,
@@ -585,7 +585,7 @@ gb_project_window_constructed (GObject *object)
 
   g_signal_connect_object (miner,
                            "discovered",
-                           G_CALLBACK (gb_project_window__miner_discovered_cb),
+                           G_CALLBACK (gb_projects_dialog__miner_discovered_cb),
                            self,
                            G_CONNECT_SWAPPED);
 
@@ -595,62 +595,62 @@ gb_project_window_constructed (GObject *object)
 
   g_signal_connect_object (self->search_entry,
                            "activate",
-                           G_CALLBACK (gb_project_window__search_entry_activate),
+                           G_CALLBACK (gb_projects_dialog__search_entry_activate),
                            self,
                            G_CONNECT_SWAPPED);
 
   g_signal_connect_object (self->search_entry,
                            "changed",
-                           G_CALLBACK (gb_project_window__search_entry_changed),
+                           G_CALLBACK (gb_projects_dialog__search_entry_changed),
                            self,
                            G_CONNECT_SWAPPED);
 
   g_signal_connect_object (self->select_button,
                            "notify::active",
-                           G_CALLBACK (gb_project_window__select_button_notify_active),
+                           G_CALLBACK (gb_projects_dialog__select_button_notify_active),
                            self,
                            G_CONNECT_SWAPPED);
 
   g_signal_connect_object (self->cancel_button,
                            "clicked",
-                           G_CALLBACK (gb_project_window__cancel_button_clicked),
+                           G_CALLBACK (gb_projects_dialog__cancel_button_clicked),
                            self,
                            G_CONNECT_SWAPPED);
 
   g_signal_connect_object (self->new_button,
                            "clicked",
-                           G_CALLBACK (gb_project_window__new_button_clicked),
+                           G_CALLBACK (gb_projects_dialog__new_button_clicked),
                            self,
                            G_CONNECT_SWAPPED);
 
   gtk_list_box_set_header_func (self->listbox,
-                                gb_project_window__listbox_header_cb,
+                                gb_projects_dialog__listbox_header_cb,
                                 NULL, NULL);
 
   gtk_list_box_set_sort_func (self->listbox,
-                              gb_project_window__listbox_sort,
+                              gb_projects_dialog__listbox_sort,
                               NULL, NULL);
 
   gtk_list_box_set_filter_func (self->listbox,
-                                gb_project_window__listbox_filter,
+                                gb_projects_dialog__listbox_filter,
                                 self, NULL);
 
   ide_project_miner_mine_async (miner,
                                 NULL,
-                                gb_project_window__miner_mine_cb,
+                                gb_projects_dialog__miner_mine_cb,
                                 g_object_ref (self));
 
-  G_OBJECT_CLASS (gb_project_window_parent_class)->constructed (object);
+  G_OBJECT_CLASS (gb_projects_dialog_parent_class)->constructed (object);
 }
 
 static gboolean
-gb_project_window_key_press_event (GtkWidget   *widget,
+gb_projects_dialog_key_press_event (GtkWidget   *widget,
                                    GdkEventKey *event)
 {
-  GbProjectWindow *self = (GbProjectWindow *)widget;
+  GbProjectsDialog *self = (GbProjectsDialog *)widget;
   gboolean ret;
 
-  ret = GTK_WIDGET_CLASS (gb_project_window_parent_class)->key_press_event (widget, event);
+  ret = GTK_WIDGET_CLASS (gb_projects_dialog_parent_class)->key_press_event (widget, event);
 
   if (!ret)
     {
@@ -687,52 +687,52 @@ gb_project_window_key_press_event (GtkWidget   *widget,
 }
 
 static void
-gb_project_window_finalize (GObject *object)
+gb_projects_dialog_finalize (GObject *object)
 {
-  GbProjectWindow *self = (GbProjectWindow *)object;
+  GbProjectsDialog *self = (GbProjectsDialog *)object;
 
   g_clear_object (&self->settings);
   g_clear_pointer (&self->selected, (GDestroyNotify)g_list_free);
   g_clear_pointer (&self->search_pattern, (GDestroyNotify)ide_pattern_spec_unref);
 
-  G_OBJECT_CLASS (gb_project_window_parent_class)->finalize (object);
+  G_OBJECT_CLASS (gb_projects_dialog_parent_class)->finalize (object);
 }
 
 static void
-gb_project_window_class_init (GbProjectWindowClass *klass)
+gb_projects_dialog_class_init (GbProjectsDialogClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 
-  object_class->constructed = gb_project_window_constructed;
-  object_class->finalize = gb_project_window_finalize;
+  object_class->constructed = gb_projects_dialog_constructed;
+  object_class->finalize = gb_projects_dialog_finalize;
 
-  widget_class->key_press_event = gb_project_window_key_press_event;
+  widget_class->key_press_event = gb_projects_dialog_key_press_event;
 
-  GB_WIDGET_CLASS_TEMPLATE (klass, "gb-project-window.ui");
+  GB_WIDGET_CLASS_TEMPLATE (klass, "gb-projects-dialog.ui");
 
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, action_bar);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, cancel_button);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, delete_button);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, header_bar);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, new_button);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, listbox);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_bar);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_button);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, search_entry);
-  GB_WIDGET_CLASS_BIND (klass, GbProjectWindow, select_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, action_bar);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, cancel_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, delete_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, header_bar);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, new_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, listbox);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, search_bar);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, search_button);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, search_entry);
+  GB_WIDGET_CLASS_BIND (klass, GbProjectsDialog, select_button);
 
   g_type_ensure (GB_TYPE_SCROLLED_WINDOW);
 }
 
 static void
-gb_project_window_init (GbProjectWindow *self)
+gb_projects_dialog_init (GbProjectsDialog *self)
 {
   gtk_widget_init_template (GTK_WIDGET (self));
 
   g_signal_connect_object (self->listbox,
                            "row-activated",
-                           G_CALLBACK (gb_project_window__listbox_row_activated_cb),
+                           G_CALLBACK (gb_projects_dialog__listbox_row_activated_cb),
                            self,
                            G_CONNECT_SWAPPED);
 

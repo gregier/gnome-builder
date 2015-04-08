@@ -32,8 +32,7 @@
 #include "gb-editor-document.h"
 #include "gb-editor-workspace.h"
 #include "gb-glib.h"
-#include "gb-initial-setup-dialog.h"
-#include "gb-project-window.h"
+#include "gb-projects-dialog.h"
 #include "gb-resources.h"
 #include "gb-workbench.h"
 
@@ -524,7 +523,7 @@ gb_application_open (GApplication   *application,
 void
 gb_application_show_projects_window (GbApplication *self)
 {
-  GbProjectWindow *window;
+  GbProjectsDialog *window;
   GtkRequisition req;
   GList *windows;
 
@@ -534,7 +533,7 @@ gb_application_show_projects_window (GbApplication *self)
 
   for (; windows; windows = windows->next)
     {
-      if (GB_IS_PROJECT_WINDOW (windows->data))
+      if (GB_IS_PROJECTS_DIALOG (windows->data))
         {
           gtk_window_present (windows->data);
           return;
@@ -543,7 +542,7 @@ gb_application_show_projects_window (GbApplication *self)
 
   get_default_size (&req);
 
-  window = g_object_new (GB_TYPE_PROJECT_WINDOW,
+  window = g_object_new (GB_TYPE_PROJECTS_DIALOG,
                          "application", self,
                          "default-width", req.width,
                          "default-height", req.height,

@@ -1,4 +1,4 @@
-/* gb-project-window.h
+/* gb-projects-dialog.h
  *
  * Copyright (C) 2015 Christian Hergert <christian@hergert.me>
  *
@@ -16,19 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GB_PROJECT_WINDOW_H
-#define GB_PROJECT_WINDOW_H
+#ifndef GB_PROJECTS_DIALOG_H
+#define GB_PROJECTS_DIALOG_H
 
 #include <gtk/gtk.h>
 
 G_BEGIN_DECLS
 
-#define GB_TYPE_PROJECT_WINDOW (gb_project_window_get_type())
+#define GB_TYPE_PROJECTS_DIALOG (gb_projects_dialog_get_type())
 
-G_DECLARE_FINAL_TYPE (GbProjectWindow, gb_project_window, GB, PROJECT_WINDOW, GtkApplicationWindow)
+G_DECLARE_FINAL_TYPE (GbProjectsDialog, gb_projects_dialog, GB, PROJECTS_DIALOG, GtkApplicationWindow)
 
-GbProjectWindow *gb_project_window_new (void);
+GbProjectsDialog *gb_projects_dialog_new (void);
 
 G_END_DECLS
 
-#endif /* GB_PROJECT_WINDOW_H */
+#endif /* GB_PROJECTS_DIALOG_H */

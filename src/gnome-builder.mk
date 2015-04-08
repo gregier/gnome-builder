@@ -37,6 +37,8 @@ libgnome_builder_la_SOURCES = \
 	src/devhelp/gb-devhelp-view.h \
 	src/dialogs/gb-new-project-dialog.c \
 	src/dialogs/gb-new-project-dialog.h \
+	src/dialogs/gb-projects-dialog.c \
+	src/dialogs/gb-projects-dialog.h \
 	src/documents/gb-document.c \
 	src/documents/gb-document.h \
 	src/editor/gb-editor-document.c \
@@ -135,8 +137,6 @@ libgnome_builder_la_SOURCES = \
 	src/views/gb-view.h \
 	src/vim/gb-vim.c \
 	src/vim/gb-vim.h \
-	src/workbench/gb-project-window.c \
-	src/workbench/gb-project-window.h \
 	src/workbench/gb-workbench-actions.c \
 	src/workbench/gb-workbench-actions.h \
 	src/workbench/gb-workbench-private.h \

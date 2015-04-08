@@ -28,7 +28,6 @@
 #include "gb-application-credits.h"
 #include "gb-application-private.h"
 #include "gb-new-project-dialog.h"
-#include "gb-project-window.h"
 #include "gb-support.h"
 #include "gb-workbench.h"
 
