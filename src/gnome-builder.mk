@@ -39,6 +39,8 @@ libgnome_builder_la_SOURCES = \
 	src/dialogs/gb-new-project-dialog.h \
 	src/dialogs/gb-projects-dialog.c \
 	src/dialogs/gb-projects-dialog.h \
+	src/dialogs/gb-recent-project-row.c \
+	src/dialogs/gb-recent-project-row.h \
 	src/documents/gb-document.c \
 	src/documents/gb-document.h \
 	src/editor/gb-editor-document.c \
