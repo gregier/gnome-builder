@@ -39,8 +39,6 @@ struct _GbProjectsDialog
 {
   GtkApplicationWindow parent_instance;
 
-  GSettings         *settings;
-
   IdeRecentProjects *recent_projects;
   IdePatternSpec    *search_pattern;
   GList             *selected;
@@ -135,39 +133,6 @@ gb_projects_dialog__listbox_row_activated_cb (GbProjectsDialog *self,
   gb_application_open_project (GB_APPLICATION (app), file, NULL);
 
   gtk_widget_destroy (GTK_WIDGET (self));
-}
-
-static gboolean
-is_recent_project (GbProjectsDialog *self,
-                   IdeProjectInfo  *info)
-{
-  gchar *uri;
-  gboolean ret = FALSE;
-  gchar **strv;
-  GFile *file;
-  gsize i;
-
-  g_assert (GB_IS_PROJECTS_DIALOG (self));
-  g_assert (G_IS_SETTINGS (self->settings));
-  g_assert (IDE_IS_PROJECT_INFO (info));
-
-  file = ide_project_info_get_file (info);
-  uri = g_file_get_uri (file);
-  strv = g_settings_get_strv (self->settings, "project-history");
-
-  for (i = 0; strv [i]; i++)
-    {
-      if (g_str_equal (strv [i], uri))
-        {
-          ret = TRUE;
-          break;
-        }
-    }
-
-  g_strfreev (strv);
-  g_free (uri);
-
-  return ret;
 }
 
 static GtkWidget *
@@ -694,7 +659,6 @@ gb_projects_dialog_finalize (GObject *object)
   GbProjectsDialog *self = (GbProjectsDialog *)object;
 
   g_clear_object (&self->recent_projects);
-  g_clear_object (&self->settings);
   g_clear_pointer (&self->selected, (GDestroyNotify)g_list_free);
   g_clear_pointer (&self->search_pattern, (GDestroyNotify)ide_pattern_spec_unref);
 
@@ -738,8 +702,6 @@ gb_projects_dialog_init (GbProjectsDialog *self)
                            G_CALLBACK (gb_projects_dialog__listbox_row_activated_cb),
                            self,
                            G_CONNECT_SWAPPED);
-
-  self->settings = g_settings_new ("org.gnome.builder");
 
   self->recent_projects = ide_recent_projects_new ();
 }
