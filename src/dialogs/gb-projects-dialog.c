@@ -58,6 +58,28 @@ struct _GbProjectsDialog
 G_DEFINE_TYPE (GbProjectsDialog, gb_projects_dialog, GTK_TYPE_APPLICATION_WINDOW)
 
 static void
+gb_projects_dialog_update_delete_sensitivity (GbProjectsDialog *self)
+{
+  gboolean selected = FALSE;
+  GList *children;
+  GList *iter;
+
+  g_assert (GB_IS_PROJECTS_DIALOG (self));
+
+  children = gtk_container_get_children (GTK_CONTAINER (self->listbox));
+
+  for (iter = children; !selected && iter; iter = iter->next)
+    {
+      if (gb_recent_project_row_get_selected (iter->data))
+        selected = TRUE;
+    }
+
+  gtk_widget_set_sensitive (GTK_WIDGET (self->delete_button), selected);
+
+  g_list_free (children);
+}
+
+static void
 gb_projects_dialog__listbox_row_activated_cb (GbProjectsDialog *self,
                                               GtkListBoxRow    *row,
                                               GtkListBox       *listbox)
@@ -76,22 +98,9 @@ gb_projects_dialog__listbox_row_activated_cb (GbProjectsDialog *self,
   if (gtk_toggle_button_get_active (self->select_button))
     {
       gboolean selected;
-      GList *children;
-      GList *iter;
 
       selected = !gb_recent_project_row_get_selected (GB_RECENT_PROJECT_ROW (row));
       gb_recent_project_row_set_selected (GB_RECENT_PROJECT_ROW (row), selected);
-
-      children = gtk_container_get_children (GTK_CONTAINER (listbox));
-      for (iter = children; !selected && iter; iter = iter->next)
-        {
-          if (gb_recent_project_row_get_selected (iter->data))
-            selected = TRUE;
-        }
-      g_list_free (children);
-
-      gtk_widget_set_sensitive (GTK_WIDGET (self->delete_button), selected);
-
       return;
     }
 
@@ -121,6 +130,11 @@ gb_projects_dialog__recent_projects_added (GbProjectsDialog  *self,
                       "project-info", project_info,
                       "visible", TRUE,
                       NULL);
+  g_signal_connect_object (row,
+                           "notify::selected",
+                           G_CALLBACK (gb_projects_dialog_update_delete_sensitivity),
+                           self,
+                           G_CONNECT_SWAPPED);
   g_object_bind_property (self->select_button, "active", row, "selection-mode",
                           G_BINDING_SYNC_CREATE);
   gtk_container_add (GTK_CONTAINER (self->listbox), row);

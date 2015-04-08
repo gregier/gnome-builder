@@ -117,6 +117,16 @@ gb_recent_project_row_set_project_info (GbRecentProjectRow *self,
 }
 
 static void
+gb_recent_project_row__check_button_toggled (GbRecentProjectRow *self,
+                                             GtkToggleButton    *toggle_button)
+{
+  g_assert (GB_IS_RECENT_PROJECT_ROW (self));
+  g_assert (GTK_IS_TOGGLE_BUTTON (toggle_button));
+
+  g_object_notify_by_pspec (G_OBJECT (self), gParamSpecs [PROP_SELECTED]);
+}
+
+static void
 gb_recent_project_row_finalize (GObject *object)
 {
   GbRecentProjectRow *self = (GbRecentProjectRow *)object;
@@ -228,6 +238,12 @@ static void
 gb_recent_project_row_init (GbRecentProjectRow *self)
 {
   gtk_widget_init_template (GTK_WIDGET (self));
+
+  g_signal_connect_object (self->check_button,
+                           "toggled",
+                           G_CALLBACK (gb_recent_project_row__check_button_toggled),
+                           self,
+                           G_CONNECT_SWAPPED);
 }
 
 IdeProjectInfo *
