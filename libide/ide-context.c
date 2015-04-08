@@ -47,6 +47,7 @@ struct _IdeContext
   IdeBufferManager         *buffer_manager;
   IdeBuildSystem           *build_system;
   IdeDeviceManager         *device_manager;
+  GtkRecentManager         *recent_manager;
   IdeScriptManager         *script_manager;
   IdeSearchEngine          *search_engine;
   IdeSourceSnippetsManager *snippets_manager;
@@ -83,6 +84,22 @@ enum {
 };
 
 static GParamSpec *gParamSpecs [LAST_PROP];
+
+/**
+ * ide_context_get_recent_manager:
+ *
+ * Gets the IdeContext:recent-manager property. The recent manager is a GtkRecentManager instance
+ * that should be used for the workbench.
+ *
+ * Returns: (transfer none): A #GtkRecentManager.
+ */
+GtkRecentManager *
+ide_context_get_recent_manager (IdeContext *self)
+{
+  g_return_val_if_fail (IDE_IS_CONTEXT (self), NULL);
+
+  return self->recent_manager;
+}
 
 /**
  * ide_context_get_back_forward_list:
@@ -502,6 +519,7 @@ ide_context_finalize (GObject *object)
   g_clear_object (&self->device_manager);
   g_clear_object (&self->project);
   g_clear_object (&self->project_file);
+  g_clear_object (&self->recent_manager);
   g_clear_object (&self->unsaved_files);
   g_clear_object (&self->vcs);
 
@@ -710,6 +728,8 @@ ide_context_init (IdeContext *self)
   g_autofree gchar *scriptsdir = NULL;
 
   IDE_ENTRY;
+
+  self->recent_manager = gtk_recent_manager_new ();
 
   self->root_build_dir = g_build_filename (g_get_user_cache_dir (),
                                            ide_get_program_name (),
