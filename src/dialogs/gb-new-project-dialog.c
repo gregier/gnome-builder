@@ -189,6 +189,7 @@ gb_new_project_dialog__clone_worker (GTask        *task,
   CloneRequest *req = task_data;
   GgitCloneOptions *clone_options;
   GgitRemoteCallbacks *callbacks;
+  IdeProgress *progress;
   GError *error = NULL;
 
   g_assert (G_IS_TASK (task));
@@ -201,7 +202,10 @@ gb_new_project_dialog__clone_worker (GTask        *task,
   ggit_clone_options_set_checkout_branch (clone_options, "master");
 
   callbacks = g_object_new (IDE_TYPE_GIT_REMOTE_CALLBACKS, NULL);
-  g_object_bind_property (callbacks, "fraction", self->clone_progress, "fraction", G_BINDING_SYNC_CREATE);
+  progress = ide_git_remote_callbacks_get_progress (IDE_GIT_REMOTE_CALLBACKS (callbacks));
+  g_object_bind_property (progress, "fraction",
+                          self->clone_progress, "fraction",
+                          G_BINDING_SYNC_CREATE);
   ggit_clone_options_set_remote_callbacks (clone_options, callbacks);
 
   repository = ggit_repository_clone (req->uri, req->location, clone_options, &error);
