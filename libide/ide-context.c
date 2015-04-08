@@ -1230,6 +1230,40 @@ ide_context_init_search_engine (gpointer             source_object,
 }
 
 static void
+ide_context_init_add_recent (gpointer             source_object,
+                             GCancellable        *cancellable,
+                             GAsyncReadyCallback  callback,
+                             gpointer             user_data)
+{
+  IdeContext *self = source_object;
+  GtkRecentData recent_data = { 0 };
+  const gchar *groups[] = { "X-GNOME-Builder-Project", NULL };
+  g_autoptr(GTask) task = NULL;
+  g_autofree gchar *uri = NULL;
+  g_autofree gchar *app_exec = NULL;
+
+  g_assert (IDE_IS_CONTEXT (self));
+  g_assert (!cancellable || G_IS_CANCELLABLE (cancellable));
+
+  task = g_task_new (self, cancellable, callback, user_data);
+
+  uri = g_file_get_uri (self->project_file);
+  app_exec = g_strdup_printf ("%s -p %%p", ide_get_program_name ());
+
+  recent_data.display_name = (gchar *)ide_project_get_name (self->project);
+  recent_data.description = NULL;
+  recent_data.mime_type = "application/x-builder-project";
+  recent_data.app_name = (gchar *)ide_get_program_name ();
+  recent_data.app_exec = app_exec;
+  recent_data.groups = (gchar **)groups;
+  recent_data.is_private = FALSE;
+
+  gtk_recent_manager_add_full (self->recent_manager, uri, &recent_data);
+
+  g_task_return_boolean (task, TRUE);
+}
+
+static void
 ide_context_init_async (GAsyncInitable      *initable,
                         int                  io_priority,
                         GCancellable        *cancellable,
@@ -1254,6 +1288,7 @@ ide_context_init_async (GAsyncInitable      *initable,
                         ide_context_init_search_engine,
                         ide_context_init_snippets,
                         ide_context_init_scripts,
+                        ide_context_init_add_recent,
                         NULL);
 
   /* TODO: Restore buffer state? */
