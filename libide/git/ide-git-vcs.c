@@ -259,6 +259,95 @@ ide_git_vcs_reload_index_add_path (IdeGitVcs   *self,
 }
 
 static void
+ide_git_vcs_load_files_walk (IdeGitVcs      *self,
+                             GgitRepository *repository,
+                             GHashTable     *cache,
+                             const gchar    *workdir,
+                             GFile          *workdir_file,
+                             GFile          *directory,
+                             GCancellable   *cancellable)
+{
+  GFileEnumerator *file_enum;
+  GFileInfo *file_info;
+  GError *error = NULL;
+
+  g_assert (IDE_IS_GIT_VCS (self));
+  g_assert (cache != NULL);
+  g_assert (workdir != NULL);
+  g_assert (G_IS_FILE (directory));
+  g_assert (!cancellable || G_IS_CANCELLABLE (cancellable));
+
+  file_enum = g_file_enumerate_children (directory,
+                                         G_FILE_ATTRIBUTE_STANDARD_TYPE","
+                                         G_FILE_ATTRIBUTE_STANDARD_NAME,
+                                         G_FILE_QUERY_INFO_NONE,
+                                         cancellable,
+                                         &error);
+  if (file_enum == NULL)
+    {
+      g_warning ("%s", error->message);
+      g_clear_error (&error);
+      return;
+    }
+
+  while ((file_info = g_file_enumerator_next_file (file_enum, cancellable, &error)))
+    {
+      const gchar *name;
+      gchar *path;
+      GFile *file;
+      GFileType file_type;
+
+      name = g_file_info_get_attribute_byte_string (file_info, G_FILE_ATTRIBUTE_STANDARD_NAME);
+      file_type = g_file_info_get_file_type (file_info);
+      file = g_file_get_child (directory, name);
+      path = g_file_get_relative_path (workdir_file, file);
+
+      if (!g_hash_table_contains (cache, path))
+        {
+          if (!ggit_repository_path_is_ignored (repository, path))
+            ide_git_vcs_reload_index_add_path (self, cache, path, workdir,
+                                               (file_type == G_FILE_TYPE_DIRECTORY));
+        }
+
+      if (file_type == G_FILE_TYPE_DIRECTORY)
+        ide_git_vcs_load_files_walk (self, repository, cache, workdir, workdir_file, file, cancellable);
+
+      g_free (path);
+      g_object_unref (file);
+      g_object_unref (file_info);
+    }
+
+  if (error != NULL)
+    {
+      g_warning ("%s", error->message);
+      g_clear_error (&error);
+    }
+
+  g_object_unref (file_enum);
+}
+
+static void
+ide_git_vcs_load_files (IdeGitVcs      *self,
+                        GgitRepository *repository,
+                        GHashTable     *cache,
+                        GFile          *root,
+                        GCancellable   *cancellable)
+{
+  gchar *workdir;
+
+  g_assert (IDE_IS_GIT_VCS (self));
+  g_assert (GGIT_IS_REPOSITORY (repository));
+  g_assert (cache != NULL);
+  g_assert (G_IS_FILE (root));
+  g_assert (!cancellable || G_IS_CANCELLABLE (cancellable));
+
+  workdir = g_file_get_path (root);
+  if (workdir != NULL)
+    ide_git_vcs_load_files_walk (self, repository, cache, workdir, root, root, cancellable);
+  g_free (workdir);
+}
+
+static void
 ide_git_vcs_build_tree_worker (GTask        *task,
                                gpointer      source_object,
                                gpointer      task_data,
@@ -322,6 +411,8 @@ ide_git_vcs_build_tree_worker (GTask        *task,
       ide_git_vcs_reload_index_add_path (self, cache, path, workdir, FALSE);
       ggit_index_entry_unref (entry);
     }
+
+  ide_git_vcs_load_files (self, repository, cache, workdir_file, cancellable);
 
 cleanup:
   if (error)
