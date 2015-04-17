@@ -7,6 +7,16 @@
         <property name="expand">true</property>
         <property name="visible">true</property>
         <child type="overlay">
+          <object class="IdeSourceMap">
+            <property name="halign">end</property>
+            <property name="margin-top">20</property>
+            <property name="margin-end">20</property>
+            <property name="valign">start</property>
+            <property name="view">source_view</property>
+            <property name="visible">true</property>
+          </object>
+        </child>
+        <child type="overlay">
           <object class="NautilusFloatingBar" id="floating_bar">
             <property name="halign">end</property>
             <property name="primary_label"></property>

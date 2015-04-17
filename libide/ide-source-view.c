@@ -43,6 +43,8 @@
 #include "ide-line-diagnostics-gutter-renderer.h"
 #include "ide-pango.h"
 #include "ide-rgba.h"
+#include "ide-source-location.h"
+#include "ide-source-map.h"
 #include "ide-source-range.h"
 #include "ide-source-snippet.h"
 #include "ide-source-snippet-chunk.h"
@@ -50,7 +52,6 @@
 #include "ide-source-snippet-context.h"
 #include "ide-source-snippet-private.h"
 #include "ide-source-snippets-manager.h"
-#include "ide-source-location.h"
 #include "ide-source-view.h"
 #include "ide-source-view-capture.h"
 #include "ide-source-view-mode.h"
@@ -5822,6 +5823,8 @@ ide_source_view_class_init (IdeSourceViewClass *klass)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE,
                   0);
+
+  g_type_ensure (IDE_TYPE_SOURCE_MAP);
 }
 
 static void
