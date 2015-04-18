@@ -30,6 +30,8 @@
 #include "gb-workbench.h"
 #include "gb-workspace.h"
 
+#define STORE_SETTINGS_TIMEOUT_SECS 1
+
 G_DEFINE_TYPE (GbWorkbench, gb_workbench, GTK_TYPE_APPLICATION_WINDOW)
 
 enum {
@@ -262,14 +264,93 @@ gb_workbench_grab_focus (GtkWidget *widget)
 }
 
 static void
+gb_workbench_apply_window_settings (GbWorkbench *self)
+{
+  g_autoptr(GSettings) settings = NULL;
+  GtkRequisition req;
+  GdkPoint pos;
+  gboolean maximize;
+
+  g_assert (GB_IS_WORKBENCH (self));
+
+  settings = g_settings_new ("org.gnome.builder");
+
+  /* Apply previous window width and height */
+  g_settings_get (settings, "window-size", "(ii)", &req.width, &req.height);
+  if ((req.width > 0) && (req.height > 0))
+    gtk_window_set_default_size (GTK_WINDOW (self), req.width, req.height);
+
+  /* Apply previous window position */
+  g_settings_get (settings, "window-position", "(ii)", &pos.x, &pos.y);
+  if ((pos.x > 0) && (pos.y > 0))
+    gtk_window_move (GTK_WINDOW (self), pos.x, pos.y);
+  else
+    gtk_window_set_position (GTK_WINDOW (self), GTK_WIN_POS_CENTER);
+
+  /* Apply previous maximized state */
+  maximize = g_settings_get_boolean (settings, "window-maximized");
+  if (maximize)
+    gtk_window_maximize (GTK_WINDOW (self));
+}
+
+static gboolean
+gb_workbench_store_window_settings (gpointer data)
+{
+  g_autoptr(GSettings) settings = NULL;
+  GbWorkbench *self = data;
+  GtkRequisition req;
+  GdkPoint pos;
+  gboolean maximized;
+
+  g_assert (GB_IS_WORKBENCH (self));
+
+  self->store_settings_timeout = 0;
+
+  settings = g_settings_new ("org.gnome.builder");
+
+  gtk_window_get_size (GTK_WINDOW (self), &req.width, &req.height);
+  if ((req.width > 0) && (req.height > 0))
+    g_settings_set (settings, "window-size", "(ii)", req.width, req.height);
+
+  maximized = gtk_window_is_maximized (GTK_WINDOW (self));
+  g_settings_set_boolean (settings, "window-maximized", maximized);
+
+  gtk_window_get_position (GTK_WINDOW (self), &pos.x, &pos.y);
+  if ((pos.x >= 0) && (pos.y >= 0))
+    g_settings_set (settings, "window-position", "(ii)", pos.x, pos.y);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
 gb_workbench_realize (GtkWidget *widget)
 {
   GbWorkbench *self = (GbWorkbench *)widget;
 
-  if (GTK_WIDGET_CLASS (gb_workbench_parent_class)->realize)
-    GTK_WIDGET_CLASS (gb_workbench_parent_class)->realize (widget);
+  gb_workbench_apply_window_settings (self);
+
+  GTK_WIDGET_CLASS (gb_workbench_parent_class)->realize (widget);
 
   gtk_widget_grab_focus (GTK_WIDGET (self->editor_workspace));
+}
+
+static gboolean
+gb_workbench_configure_event (GtkWidget         *widget,
+                              GdkEventConfigure *event)
+{
+  GbWorkbench *self = (GbWorkbench *)widget;
+
+  g_assert (GB_IS_WORKBENCH (widget));
+  g_assert (event != NULL);
+
+  if (self->store_settings_timeout == 0)
+    {
+      self->store_settings_timeout = g_timeout_add_seconds (STORE_SETTINGS_TIMEOUT_SECS,
+                                                            gb_workbench_store_window_settings,
+                                                            self);
+    }
+
+  return GTK_WIDGET_CLASS (gb_workbench_parent_class)->configure_event (widget, event);
 }
 
 static void
@@ -324,6 +405,12 @@ gb_workbench_finalize (GObject *object)
   GbWorkbench *self = (GbWorkbench *)object;
 
   IDE_ENTRY;
+
+  if (self->store_settings_timeout)
+    {
+      g_source_remove (self->store_settings_timeout);
+      self->store_settings_timeout = 0;
+    }
 
   ide_clear_weak_pointer (&self->active_workspace);
   g_clear_object (&self->context);
@@ -400,6 +487,7 @@ gb_workbench_class_init (GbWorkbenchClass *klass)
   object_class->get_property = gb_workbench_get_property;
   object_class->set_property = gb_workbench_set_property;
 
+  widget_class->configure_event = gb_workbench_configure_event;
   widget_class->delete_event = gb_workbench_delete_event;
   widget_class->drag_data_received = gb_workbench_drag_data_received;
   widget_class->draw = gb_workbench_draw;

@@ -53,6 +53,8 @@ struct _GbWorkbench
 
   gulong                  project_notify_name_handler;
 
+  guint                   store_settings_timeout;
+
   guint                   disposing;
   guint                   building : 1;
   guint                   unloading : 1;
