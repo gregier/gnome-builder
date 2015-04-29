@@ -3,8 +3,6 @@
   <gresource prefix="/org/gnome/builder">
     <file alias="css/markdown.css">../../data/css/markdown.css</file>
 
-    <file>editor/uncrustify/uncrustify.c.cfg</file>
-
     <file alias="gtk/menus.ui">../../data/gtk/menus.ui</file>
 
     <!-- Scalable icons all go into actions/ since gtk+ will ignore our directory scheme -->
