@@ -103,10 +103,52 @@ gb_workbench__context_restore_cb (GObject      *object,
   gtk_widget_grab_focus (GTK_WIDGET (self->editor_workspace));
 }
 
+static GtkWidget *
+create_device_widget (gpointer item,
+                      gpointer user_data)
+{
+  GbWorkbench *self = user_data;
+  IdeDevice *device = item;
+  GtkWidget *row;
+  GtkWidget *name;
+  GtkWidget *desc;
+
+  g_assert (IDE_IS_DEVICE (device));
+  g_assert (GB_IS_WORKBENCH (self));
+
+  row = g_object_new (GTK_TYPE_BOX,
+                      "orientation", GTK_ORIENTATION_HORIZONTAL,
+                      "visible", TRUE,
+                      "spacing", 6,
+                      "margin", 6,
+                      NULL);
+
+  name = g_object_new (GTK_TYPE_LABEL,
+                      "visible", TRUE,
+                      "hexpand", TRUE,
+                      "xalign", 0.0f,
+                      "valign", GTK_ALIGN_BASELINE,
+                      NULL);
+  g_object_bind_property (device, "display-name", name, "label", G_BINDING_SYNC_CREATE);
+  gtk_container_add (GTK_CONTAINER (row), name);
+
+  desc = g_object_new (GTK_TYPE_LABEL,
+                       "visible", TRUE,
+                       "valign", GTK_ALIGN_BASELINE,
+                       "xalign", 1.0f,
+                       NULL);
+  gtk_style_context_add_class (gtk_widget_get_style_context (desc), "dim-label");
+  g_object_bind_property (device, "system-type", desc, "label", G_BINDING_SYNC_CREATE);
+  gtk_container_add (GTK_CONTAINER (row), desc);
+
+  return row;
+}
+
 static void
 gb_workbench_connect_context (GbWorkbench *self,
                               IdeContext  *context)
 {
+  IdeDeviceManager *device_manager;
   IdeProject *project;
 
   g_assert (GB_IS_WORKBENCH (self));
@@ -121,6 +163,13 @@ gb_workbench_connect_context (GbWorkbench *self,
                              self,
                              G_CONNECT_SWAPPED);
   gb_workbench__project_notify_name_cb (self, NULL, project);
+
+  device_manager = ide_context_get_device_manager (context);
+  gtk_list_box_bind_model (self->devices_list_box,
+                           G_LIST_MODEL (device_manager),
+                           create_device_widget,
+                           self,
+                           NULL);
 }
 
 static void
@@ -492,6 +541,7 @@ gb_workbench_class_init (GbWorkbenchClass *klass)
 
   GB_WIDGET_CLASS_TEMPLATE (klass, "gb-workbench.ui");
   GB_WIDGET_CLASS_BIND (klass, GbWorkbench, command_bar);
+  GB_WIDGET_CLASS_BIND (klass, GbWorkbench, devices_list_box);
   GB_WIDGET_CLASS_BIND (klass, GbWorkbench, editor_workspace);
   GB_WIDGET_CLASS_BIND (klass, GbWorkbench, gear_menu_button);
   GB_WIDGET_CLASS_BIND (klass, GbWorkbench, search_box);

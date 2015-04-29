@@ -50,6 +50,7 @@ struct _GbWorkbench
   GeditMenuStackSwitcher *gear_menu_button;
   GbSearchBox            *search_box;
   GtkStack               *stack;
+  GtkListBox             *devices_list_box;
 
   gulong                  project_notify_name_handler;
 
